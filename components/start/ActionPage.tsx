@@ -118,10 +118,11 @@ const ActionPage = () => {
   });
   const { user: myuser } = useCurrentUser();
   const { registerAsMusician, registerAsClient, registerAsBooker } = useUserMutations();
-  const { isTeacherEnabled, isBookerEnabled } = useFeatureFlags();
+  const { isTeacherEnabled, isBookerEnabled ,isBothEnabled} = useFeatureFlags();
 
   const teacherEnabled = isTeacherEnabled();
   const bookerEnabled = isBookerEnabled();
+    const bothEnabled = isBothEnabled();
 
   const [showMoreInfo, setMoreInfo] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -392,10 +393,10 @@ const ActionPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0B1120] to-[#0A0F1C]">
+    <div className="min-h-screen bg-linear-to-br from-[#0B1120] to-[#0A0F1C]">
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-5" />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0B1120] via-transparent to-transparent" />
+      <div className="absolute inset-0 bg-linear-to-t from-[#0B1120] via-transparent to-transparent" />
       
       {/* Floating Orbs */}
       <div className="absolute top-20 left-10 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
@@ -421,7 +422,7 @@ const ActionPage = () => {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.2, type: "spring" }}
-              className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 mb-4 md:mb-6 shadow-2xl shadow-blue-500/20"
+              className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-linear-to-br from-blue-500 to-purple-600 mb-4 md:mb-6 shadow-2xl shadow-blue-500/20"
             >
               <Zap className="w-8 h-8 md:w-10 md:h-10 text-white" />
             </motion.div>
@@ -433,7 +434,7 @@ const ActionPage = () => {
               className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-3 md:mb-4"
             >
               Welcome to{" "}
-              <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              <span className="bg-linear-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
                 gigUp
               </span>
             </motion.h1>
@@ -473,9 +474,9 @@ const ActionPage = () => {
                 myuser?.isClient && "opacity-50 cursor-not-allowed"
               )}
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
+              <div className="absolute inset-0 bg-linear-to-r from-orange-500 to-amber-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
               <div className="relative bg-[#151F2E] border border-gray-800 rounded-2xl p-4 md:p-6 hover:border-orange-500/50 transition-all">
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 flex items-center justify-center mb-3 md:mb-4">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-linear-to-r from-orange-500 to-amber-500 flex items-center justify-center mb-3 md:mb-4">
                   <Users className="w-5 h-5 md:w-6 md:h-6 text-white" />
                 </div>
                 <h3 className="text-lg md:text-xl font-bold text-white mb-1 md:mb-2">Hire Talent</h3>
@@ -483,7 +484,7 @@ const ActionPage = () => {
                 <div className="flex items-center gap-2 text-xs text-gray-500">
                   <div className="flex -space-x-2">
                     {[...Array(3)].map((_, i) => (
-                      <div key={i} className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-[#151F2E]" />
+                      <div key={i} className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-linear-to-br from-gray-700 to-gray-800 border-2 border-[#151F2E]" />
                     ))}
                   </div>
                   <span>500+ active</span>
@@ -514,9 +515,9 @@ const ActionPage = () => {
                 myuser?.isMusician && "opacity-50 cursor-not-allowed"
               )}
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
+              <div className="absolute inset-0 bg-linear-to-r from-blue-500 to-cyan-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
               <div className="relative bg-[#151F2E] border border-gray-800 rounded-2xl p-4 md:p-6 hover:border-blue-500/50 transition-all">
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center mb-3 md:mb-4">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-linear-to-r from-blue-500 to-cyan-500 flex items-center justify-center mb-3 md:mb-4">
                   <Music className="w-5 h-5 md:w-6 md:h-6 text-white" />
                 </div>
                 <h3 className="text-lg md:text-xl font-bold text-white mb-1 md:mb-2">Find Gigs</h3>
@@ -524,7 +525,7 @@ const ActionPage = () => {
                 <div className="flex items-center gap-2 text-xs text-gray-500">
                   <div className="flex -space-x-2">
                     {[...Array(3)].map((_, i) => (
-                      <div key={i} className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-[#151F2E]" />
+                      <div key={i} className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-linear-to-br from-gray-700 to-gray-800 border-2 border-[#151F2E]" />
                     ))}
                   </div>
                   <span>2,000+ musicians</span>
@@ -556,9 +557,9 @@ const ActionPage = () => {
                   myuser?.isBooker && "opacity-50 cursor-not-allowed"
                 )}
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
+                <div className="absolute inset-0 bg-linear-to-r from-emerald-500 to-teal-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
                 <div className="relative bg-[#151F2E] border border-gray-800 rounded-2xl p-4 md:p-6 hover:border-emerald-500/50 transition-all">
-                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 flex items-center justify-center mb-3 md:mb-4">
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-linear-to-r from-emerald-500 to-teal-500 flex items-center justify-center mb-3 md:mb-4">
                     <Briefcase className="w-5 h-5 md:w-6 md:h-6 text-white" />
                   </div>
                   <h3 className="text-lg md:text-xl font-bold text-white mb-1 md:mb-2">Manage Talent</h3>
@@ -566,7 +567,7 @@ const ActionPage = () => {
                   <div className="flex items-center gap-2 text-xs text-gray-500">
                     <div className="flex -space-x-2">
                       {[...Array(3)].map((_, i) => (
-                        <div key={i} className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-[#151F2E]" />
+                        <div key={i} className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-linear-to-br from-gray-700 to-gray-800 border-2 border-[#151F2E]" />
                       ))}
                     </div>
                     <span>100+ bookers</span>
@@ -580,7 +581,8 @@ const ActionPage = () => {
               </motion.div>
             )}
 
-            {/* Dual Role Card */}
+            {/* Dual Role Card */} 
+              {bothEnabled &&
             <motion.div
               variants={fadeInUp}
               whileHover={{ y: -5 }}
@@ -593,9 +595,9 @@ const ActionPage = () => {
               }}
               className="group relative cursor-pointer opacity-60"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
+              <div className="absolute inset-0 bg-linear-to-r from-purple-500 to-pink-500 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
               <div className="relative bg-[#151F2E] border border-gray-800 rounded-2xl p-4 md:p-6">
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center mb-3 md:mb-4">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-linear-to-r from-purple-500 to-pink-500 flex items-center justify-center mb-3 md:mb-4">
                   <HiSwitchHorizontal className="w-5 h-5 md:w-6 md:h-6 text-white" />
                 </div>
                 <h3 className="text-lg md:text-xl font-bold text-white mb-1 md:mb-2">Dual Role</h3>
@@ -607,7 +609,7 @@ const ActionPage = () => {
                   </div>
                 )}
               </div>
-            </motion.div>
+            </motion.div>}
           </motion.div>
 
           {/* Registration Modal */}
@@ -630,10 +632,10 @@ const ActionPage = () => {
                   {/* Modal Header with Progress */}
                   <div className={cn(
                     "p-4 md:p-6 relative overflow-hidden",
-                    selectedRole === "client" && "bg-gradient-to-r from-orange-500/20 via-orange-500/5 to-transparent",
-                    selectedRole === "musician" && "bg-gradient-to-r from-blue-500/20 via-blue-500/5 to-transparent",
-                    selectedRole === "booker" && "bg-gradient-to-r from-emerald-500/20 via-emerald-500/5 to-transparent",
-                    selectedRole === "both" && "bg-gradient-to-r from-purple-500/20 via-purple-500/5 to-transparent"
+                    selectedRole === "client" && "bg-linear-to-r from-orange-500/20 via-orange-500/5 to-transparent",
+                    selectedRole === "musician" && "bg-linear-to-r from-blue-500/20 via-blue-500/5 to-transparent",
+                    selectedRole === "booker" && "bg-linear-to-r from-emerald-500/20 via-emerald-500/5 to-transparent",
+                    selectedRole === "both" && "bg-linear-to-r from-purple-500/20 via-purple-500/5 to-transparent"
                   )}>
                     <div className="flex items-start justify-between mb-4">
                       <div>
@@ -664,9 +666,9 @@ const ActionPage = () => {
                         <motion.div
                           className={cn(
                             "h-full rounded-full",
-                            selectedRole === "client" && "bg-gradient-to-r from-orange-500 to-amber-500",
-                            selectedRole === "musician" && "bg-gradient-to-r from-blue-500 to-cyan-500",
-                            selectedRole === "booker" && "bg-gradient-to-r from-emerald-500 to-teal-500"
+                            selectedRole === "client" && "bg-linear-to-r from-orange-500 to-amber-500",
+                            selectedRole === "musician" && "bg-linear-to-r from-blue-500 to-cyan-500",
+                            selectedRole === "booker" && "bg-linear-to-r from-emerald-500 to-teal-500"
                           )}
                           initial={{ width: 0 }}
                           animate={{ width: `${progress}%` }}
@@ -1185,9 +1187,9 @@ const ActionPage = () => {
                         disabled={loading.musician || loading.client || loading.booker}
                         className={cn(
                           "flex-1 py-3 px-4 rounded-xl font-medium transition-all flex items-center justify-center gap-2",
-                          selectedRole === "client" && "bg-gradient-to-r from-orange-500 to-amber-500 text-white hover:opacity-90",
-                          selectedRole === "musician" && "bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:opacity-90",
-                          selectedRole === "booker" && "bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:opacity-90",
+                          selectedRole === "client" && "bg-linear-to-r from-orange-500 to-amber-500 text-white hover:opacity-90",
+                          selectedRole === "musician" && "bg-linear-to-r from-blue-500 to-cyan-500 text-white hover:opacity-90",
+                          selectedRole === "booker" && "bg-linear-to-r from-emerald-500 to-teal-500 text-white hover:opacity-90",
                           "disabled:opacity-50 disabled:cursor-not-allowed"
                         )}
                       >
