@@ -284,7 +284,8 @@ export const gigModel = defineTable({
       // ADD THIS - extracted OCR data
       extractedData: v.optional(
         v.object({
-          transactionId: v.optional(v.string()),
+          // CHANGE THIS LINE - add union with null
+          transactionId: v.optional(v.union(v.string(), v.null())),
           amount: v.optional(v.number()),
           date: v.optional(v.string()),
           time: v.optional(v.string()),
@@ -298,7 +299,7 @@ export const gigModel = defineTable({
     }),
   ),
 
-  // Update the clientConfirmPayment object
+  // Also update the clientConfirmPayment object to match if needed
   clientConfirmPayment: v.optional(
     v.object({
       gigId: v.id("gigs"),
@@ -316,7 +317,8 @@ export const gigModel = defineTable({
       // ADD THIS - extracted OCR data
       extractedData: v.optional(
         v.object({
-          transactionId: v.union(v.string(), v.null()),
+          // CHANGE THIS LINE to match
+          transactionId: v.optional(v.union(v.string(), v.null())),
           amount: v.optional(v.number()),
           date: v.optional(v.string()),
           time: v.optional(v.string()),

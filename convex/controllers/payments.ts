@@ -379,17 +379,54 @@ export const confirmPayment = mutation({
     ) {
       const musicianConfirm = updatedGig.musicianConfirmPayment;
       const clientConfirm = updatedGig.clientConfirmPayment;
+      // In your confirmPayment mutation handler
 
       // Get the extracted data from both confirmations
       const musicianData = musicianConfirm.extractedData;
       const clientData = clientConfirm.extractedData;
 
-      // 🔥 CALL THE COMPARISON FUNCTION FROM PAYMENTTYPES
+      // Transform the data to match ExtractedPaymentData exactly (no undefined, only string | null)
+      const transformExtractedData = (
+        data: typeof musicianData,
+      ): ExtractedPaymentData | undefined => {
+        if (!data) return undefined;
+
+        return {
+          // Map all fields to ensure no undefined values
+          transactionId:
+            data.transactionId === undefined ? null : data.transactionId,
+          amount: data.amount === undefined ? null : data.amount,
+          date: data.date === undefined ? null : data.date,
+          time: data.time === undefined ? null : data.time,
+          phoneNumber: data.phoneNumber === undefined ? null : data.phoneNumber,
+          sender: data.sender === undefined ? null : data.sender,
+          receiver: data.receiver === undefined ? null : data.receiver,
+          fullText: data.fullText || "", // fullText is required in interface, provide default
+          confidence: data.confidence, // confidence is required in interface
+        };
+      };
+
+      // Now also need to transform the PaymentConfirmation objects themselves
+      const transformPaymentConfirmation = (
+        confirmation: typeof musicianConfirm,
+      ): PaymentConfirmation => {
+        return {
+          confirmed: confirmation.confirmed,
+          confirmedAt: confirmation.confirmedAt,
+          amount: confirmation.amount,
+          paymentMethod: confirmation.paymentMethod,
+          screenshot: confirmation.screenshot,
+          notes: confirmation.notes,
+          extractedData: transformExtractedData(confirmation.extractedData),
+        };
+      };
+
+      // 🔥 CALL THE COMPARISON FUNCTION WITH TRANSFORMED OBJECTS
       const comparison = compareConfirmations(
-        musicianConfirm,
-        clientConfirm,
-        musicianData,
-        clientData,
+        transformPaymentConfirmation(musicianConfirm),
+        transformPaymentConfirmation(clientConfirm),
+        transformExtractedData(musicianData),
+        transformExtractedData(clientData),
       );
 
       console.log("Payment comparison result:", comparison);
@@ -733,6 +770,43 @@ export const getPaymentStatus = mutation({
     ) {
       role = "musician";
     }
+    if (!gig?.musicianConfirmPayment)
+      throw new Error("musicianConfirmPayment not found");
+    // Helper functions for transformation (same as in confirmPayment)
+    const toExtractedPaymentData = (
+      data: typeof gig.musicianConfirmPayment.extractedData,
+    ): ExtractedPaymentData | undefined => {
+      if (!data) return undefined;
+
+      return {
+        transactionId:
+          data.transactionId === undefined ? null : data.transactionId,
+        amount: data.amount === undefined ? null : data.amount,
+        date: data.date === undefined ? null : data.date,
+        time: data.time === undefined ? null : data.time,
+        phoneNumber: data.phoneNumber === undefined ? null : data.phoneNumber,
+        sender: data.sender === undefined ? null : data.sender,
+        receiver: data.receiver === undefined ? null : data.receiver,
+        fullText: data.fullText || "",
+        confidence: data.confidence,
+      };
+    };
+
+    const toPaymentConfirmation = (
+      confirmation: typeof gig.musicianConfirmPayment,
+    ): PaymentConfirmation | undefined => {
+      if (!confirmation) return undefined;
+
+      return {
+        confirmed: confirmation.confirmed,
+        confirmedAt: confirmation.confirmedAt,
+        amount: confirmation.amount,
+        paymentMethod: confirmation.paymentMethod,
+        screenshot: confirmation.screenshot,
+        notes: confirmation.notes,
+        extractedData: toExtractedPaymentData(confirmation.extractedData),
+      };
+    };
 
     // Calculate auto-verification if both confirmations exist
     let autoVerification = null;
@@ -741,12 +815,22 @@ export const getPaymentStatus = mutation({
       gig.clientConfirmPayment?.extractedData &&
       !gig.paymentVerification
     ) {
-      // 🔥 USE COMPARISON FUNCTION HERE TOO
-      const comparison = compareConfirmations(
-        gig.musicianConfirmPayment,
-        gig.clientConfirmPayment,
+      // Transform the data before passing to compareConfirmations
+      const musicianConfirm = toPaymentConfirmation(gig.musicianConfirmPayment);
+      const clientConfirm = toPaymentConfirmation(gig.clientConfirmPayment);
+      const musicianData = toExtractedPaymentData(
         gig.musicianConfirmPayment.extractedData,
+      );
+      const clientData = toExtractedPaymentData(
         gig.clientConfirmPayment.extractedData,
+      );
+
+      // 🔥 USE COMPARISON FUNCTION WITH TRANSFORMED DATA
+      const comparison = compareConfirmations(
+        musicianConfirm!,
+        clientConfirm!,
+        musicianData,
+        clientData,
       );
 
       autoVerification = {
