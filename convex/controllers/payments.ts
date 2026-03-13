@@ -2,8 +2,133 @@
 import { mutation } from "../_generated/server";
 import { v } from "convex/values";
 import { Id } from "../_generated/dataModel";
-import { compareConfirmations } from "../payment";
 
+export interface ExtractedPaymentData {
+  transactionId: string | null;
+  amount: number | null;
+  date: string | null;
+  time: string | null;
+  phoneNumber: string | null;
+  sender: string | null;
+  receiver: string | null;
+  fullText: string;
+  confidence: number;
+}
+
+export interface PaymentConfirmation {
+  confirmed: boolean;
+  confirmedAt: number;
+  amount: number;
+  paymentMethod: "mpesa" | "cash" | "bank" | "other";
+  screenshot: string;
+  notes?: string;
+  extractedData?: ExtractedPaymentData;
+}
+
+// 🔥 THIS IS YOUR COMPARISON FUNCTION 🔥
+export function compareConfirmations(
+  musicianConfirm: PaymentConfirmation,
+  clientConfirm: PaymentConfirmation,
+  extractedMusician?: ExtractedPaymentData | null,
+  extractedClient?: ExtractedPaymentData | null,
+) {
+  if (!musicianConfirm || !clientConfirm) {
+    return {
+      match: false,
+      reason: "Missing confirmation from one or both parties",
+      code: "MISSING_CONFIRMATION",
+    };
+  }
+
+  const results = {
+    match: true,
+    reasons: [] as string[],
+    details: {} as any,
+  };
+
+  // Compare amounts from user input
+  if (musicianConfirm.amount !== clientConfirm.amount) {
+    results.match = false;
+    results.reasons.push(
+      `Amount mismatch: Musician KES ${musicianConfirm.amount}, Client KES ${clientConfirm.amount}`,
+    );
+    results.details.amountMismatch = {
+      musician: musicianConfirm.amount,
+      client: clientConfirm.amount,
+    };
+  }
+
+  // Compare payment methods
+  if (musicianConfirm.paymentMethod !== clientConfirm.paymentMethod) {
+    results.match = false;
+    results.reasons.push(
+      `Payment method mismatch: ${musicianConfirm.paymentMethod} vs ${clientConfirm.paymentMethod}`,
+    );
+    results.details.methodMismatch = {
+      musician: musicianConfirm.paymentMethod,
+      client: clientConfirm.paymentMethod,
+    };
+  }
+
+  // Compare OCR extracted data if available
+  if (extractedMusician && extractedClient) {
+    // Compare transaction IDs
+    if (extractedMusician.transactionId && extractedClient.transactionId) {
+      if (extractedMusician.transactionId !== extractedClient.transactionId) {
+        results.match = false;
+        results.reasons.push(`Transaction ID mismatch`);
+        results.details.transactionMismatch = {
+          musician: extractedMusician.transactionId,
+          client: extractedClient.transactionId,
+        };
+      }
+    }
+
+    // Compare amounts from OCR
+    if (extractedMusician.amount && extractedClient.amount) {
+      if (Math.abs(extractedMusician.amount - extractedClient.amount) > 0.01) {
+        results.match = false;
+        results.reasons.push(`OCR amount mismatch`);
+        results.details.ocrAmountMismatch = {
+          musician: extractedMusician.amount,
+          client: extractedClient.amount,
+        };
+      }
+    }
+
+    // Check OCR confidence
+    if (extractedMusician.confidence < 70 || extractedClient.confidence < 70) {
+      results.reasons.push(
+        `Low OCR confidence: Musician ${extractedMusician.confidence}%, Client ${extractedClient.confidence}%`,
+      );
+      results.details.lowConfidence = {
+        musician: extractedMusician.confidence,
+        client: extractedClient.confidence,
+      };
+    }
+  }
+
+  // Check if both confirmations are positive
+  if (!musicianConfirm.confirmed || !clientConfirm.confirmed) {
+    results.match = false;
+    results.reasons.push(
+      !musicianConfirm.confirmed
+        ? "Musician has not confirmed"
+        : "Client has not confirmed",
+    );
+  }
+
+  return {
+    match: results.match,
+    reason: results.reasons.join(". "),
+    reasons: results.reasons,
+    details: results.details,
+    extractedData: {
+      musician: extractedMusician,
+      client: extractedClient,
+    },
+  };
+}
 // Helper to create notifications
 async function createPaymentNotification(
   ctx: any,
@@ -86,12 +211,13 @@ export const confirmPayment = mutation({
       v.literal("bank"),
       v.literal("other"),
     ),
+    clerkId: v.optional(v.string()),
     screenshot: v.string(), // Storage ID
     notes: v.optional(v.string()),
     // Add extracted data from OCR API route
     extractedData: v.optional(
       v.object({
-        transactionId: v.optional(v.string()),
+        transactionId: v.union(v.string(), v.null()),
         amount: v.optional(v.number()),
         date: v.optional(v.string()),
         time: v.optional(v.string()),
@@ -104,13 +230,10 @@ export const confirmPayment = mutation({
     ),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
     // Get current user
     const currentUser = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId as string))
       .first();
     if (!currentUser) throw new Error("User not found");
 
@@ -256,24 +379,62 @@ export const confirmPayment = mutation({
     ) {
       const musicianConfirm = updatedGig.musicianConfirmPayment;
       const clientConfirm = updatedGig.clientConfirmPayment;
+      // In your confirmPayment mutation handler
 
-      // Use the extracted data from both confirmations (already done client-side)
+      // Get the extracted data from both confirmations
       const musicianData = musicianConfirm.extractedData;
       const clientData = clientConfirm.extractedData;
 
+      // Transform the data to match ExtractedPaymentData exactly (no undefined, only string | null)
+      const transformExtractedData = (
+        data: typeof musicianData,
+      ): ExtractedPaymentData | undefined => {
+        if (!data) return undefined;
+
+        return {
+          // Map all fields to ensure no undefined values
+          transactionId:
+            data.transactionId === undefined ? null : data.transactionId,
+          amount: data.amount === undefined ? null : data.amount,
+          date: data.date === undefined ? null : data.date,
+          time: data.time === undefined ? null : data.time,
+          phoneNumber: data.phoneNumber === undefined ? null : data.phoneNumber,
+          sender: data.sender === undefined ? null : data.sender,
+          receiver: data.receiver === undefined ? null : data.receiver,
+          fullText: data.fullText || "", // fullText is required in interface, provide default
+          confidence: data.confidence, // confidence is required in interface
+        };
+      };
+
+      // Now also need to transform the PaymentConfirmation objects themselves
+      const transformPaymentConfirmation = (
+        confirmation: typeof musicianConfirm,
+      ): PaymentConfirmation => {
+        return {
+          confirmed: confirmation.confirmed,
+          confirmedAt: confirmation.confirmedAt,
+          amount: confirmation.amount,
+          paymentMethod: confirmation.paymentMethod,
+          screenshot: confirmation.screenshot,
+          notes: confirmation.notes,
+          extractedData: transformExtractedData(confirmation.extractedData),
+        };
+      };
+
+      // 🔥 CALL THE COMPARISON FUNCTION WITH TRANSFORMED OBJECTS
       const comparison = compareConfirmations(
-        musicianConfirm,
-        clientConfirm,
-        musicianData,
-        clientData,
+        transformPaymentConfirmation(musicianConfirm),
+        transformPaymentConfirmation(clientConfirm),
+        transformExtractedData(musicianData),
+        transformExtractedData(clientData),
       );
 
       console.log("Payment comparison result:", comparison);
 
-      // Use SYSTEM user ID or a placeholder
+      // Use SYSTEM user ID
       const SYSTEM_USER_ID = "SYSTEM" as Id<"users">;
 
-      // Helper function to safely get extracted data
+      // Helper function to safely get extracted data for verification
       function getSafeExtractedData(comparison: any, defaultAmount: number) {
         if (!comparison.extractedData) return undefined;
 
@@ -294,7 +455,7 @@ export const confirmPayment = mutation({
         };
       }
 
-      // Update payment verification
+      // Update payment verification with comparison results
       await ctx.db.patch(args.gigId, {
         paymentVerification: {
           gigId: args.gigId,
@@ -308,11 +469,12 @@ export const confirmPayment = mutation({
             client: comparison.extractedData?.client?.confidence ?? 0,
           },
         },
+        paymentStatus: comparison.match ? "verified_paid" : "disputed",
       });
 
-      // Handle verification result
+      // Handle verification result based on comparison
       if (comparison.match) {
-        // Amounts match - notify both parties
+        // ✅ Amounts match - notify both parties
         if (musicianUser) {
           await createPaymentNotification(ctx, {
             userDocumentId: musicianUser._id,
@@ -347,7 +509,7 @@ export const confirmPayment = mutation({
           });
         }
       } else {
-        // Amount mismatch or OCR detected issues - dispute
+        // ⚠️ Amount mismatch or OCR detected issues - dispute
         const disputeReason =
           comparison.reason || "Payment details don't match";
 
@@ -450,6 +612,7 @@ export const verifyPayment = mutation({
         extractedData: args.extractedData,
         notes: args.notes,
       },
+      paymentStatus: args.match ? "verified_paid" : "disputed",
     });
 
     // Get users for notifications
@@ -607,20 +770,67 @@ export const getPaymentStatus = mutation({
     ) {
       role = "musician";
     }
+    if (!gig?.musicianConfirmPayment)
+      throw new Error("musicianConfirmPayment not found");
+    // Helper functions for transformation (same as in confirmPayment)
+    const toExtractedPaymentData = (
+      data: typeof gig.musicianConfirmPayment.extractedData,
+    ): ExtractedPaymentData | undefined => {
+      if (!data) return undefined;
 
-    // NOTE: OCR should NOT be run here. This should be removed.
-    // The client should have already sent extractedData with confirmations
+      return {
+        transactionId:
+          data.transactionId === undefined ? null : data.transactionId,
+        amount: data.amount === undefined ? null : data.amount,
+        date: data.date === undefined ? null : data.date,
+        time: data.time === undefined ? null : data.time,
+        phoneNumber: data.phoneNumber === undefined ? null : data.phoneNumber,
+        sender: data.sender === undefined ? null : data.sender,
+        receiver: data.receiver === undefined ? null : data.receiver,
+        fullText: data.fullText || "",
+        confidence: data.confidence,
+      };
+    };
+
+    const toPaymentConfirmation = (
+      confirmation: typeof gig.musicianConfirmPayment,
+    ): PaymentConfirmation | undefined => {
+      if (!confirmation) return undefined;
+
+      return {
+        confirmed: confirmation.confirmed,
+        confirmedAt: confirmation.confirmedAt,
+        amount: confirmation.amount,
+        paymentMethod: confirmation.paymentMethod,
+        screenshot: confirmation.screenshot,
+        notes: confirmation.notes,
+        extractedData: toExtractedPaymentData(confirmation.extractedData),
+      };
+    };
+
+    // Calculate auto-verification if both confirmations exist
     let autoVerification = null;
     if (
       gig.musicianConfirmPayment?.extractedData &&
       gig.clientConfirmPayment?.extractedData &&
       !gig.paymentVerification
     ) {
-      const comparison = compareConfirmations(
-        gig.musicianConfirmPayment,
-        gig.clientConfirmPayment,
+      // Transform the data before passing to compareConfirmations
+      const musicianConfirm = toPaymentConfirmation(gig.musicianConfirmPayment);
+      const clientConfirm = toPaymentConfirmation(gig.clientConfirmPayment);
+      const musicianData = toExtractedPaymentData(
         gig.musicianConfirmPayment.extractedData,
+      );
+      const clientData = toExtractedPaymentData(
         gig.clientConfirmPayment.extractedData,
+      );
+
+      // 🔥 USE COMPARISON FUNCTION WITH TRANSFORMED DATA
+      const comparison = compareConfirmations(
+        musicianConfirm!,
+        clientConfirm!,
+        musicianData,
+        clientData,
       );
 
       autoVerification = {
