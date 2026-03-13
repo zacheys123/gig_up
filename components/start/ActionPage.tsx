@@ -87,9 +87,8 @@ const bookerSkillsList = [
   "Contract Negotiation", "Tour Management", "Public Relations"
 ];
 
-const clientTypes = ["individual", "event_planner", "venue", "corporate"];
+const clientTypes = ["individual_client", "event_planner_client", "venue_client", "corporate_client"];
 const bookerTypes = ["talent_agent", "booking_manager"];
-
 type Error = string[];
 type RoleType = "instrumentalist" | "dj" | "mc" | "vocalist" | "teacher";
 
@@ -230,7 +229,7 @@ const ActionPage = () => {
     if (!formData.organization) errors.push("Organization is required");
     if (!formData.clientType) errors.push("Client type is required");
     if (!formData.talentbio) errors.push("Bio is required");
-    if (formData.skills.length === 0) errors.push("Add at least one skill");
+    
     return errors;
   }, [formData]);
 
@@ -291,7 +290,7 @@ const ActionPage = () => {
           organization: formData.organization,
           talentbio: formData.talentbio,
           clientType: formData.clientType,
-          skills: formData.skills,
+          skills:[]
         });
       } else if (role === "booker") {
         await registerAsBooker({
@@ -335,7 +334,7 @@ const ActionPage = () => {
       vocalist: ["city", "vocalistgenre", "skills", "experience", "bio"],
       teacher: ["city", "instrument", "specialization", "teaching", "studentAge", "skills", "experience", "bio"],
       booker: ["city", "organization", "bookerType", "bookerSkills", "skills", "experience", "bio"],
-      client: ["city", "organization", "clientType", "skills", "bio"],
+      client: ["city", "organization", "clientType", "bio"],
     };
 
     if (!selectedRole) return [];

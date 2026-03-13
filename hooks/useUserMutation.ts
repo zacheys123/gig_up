@@ -3,7 +3,7 @@ import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useAuth } from "@clerk/nextjs";
 
-type ClientType = "individual" | "event_planner" | "venue" | "corporate";
+type ClientType = "individual_client" | "event_planner_client" | "venue_client" | "corporate_client";
 type BookerType = "talent_agent" | "booking_manager";
 
 export function useUserMutations() {
@@ -100,7 +100,7 @@ export function useUserMutations() {
     skills?: string[]; // Make skills optional
   }) => {
     if (!userId) throw new Error("No user ID available");
-    const validClientType = clientData.clientType as ClientType;
+    const validClientType = `${clientData.clientType}_client` as ClientType; // Add "_client" suffix
 
     const updates = {
       isMusician: false,

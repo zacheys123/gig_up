@@ -552,12 +552,8 @@ export const updateUserAsMusician = mutation({
       studentAgeGroup: v.optional(v.string()),
       // Client and Booker types
       clientType: v.optional(
-        v.union(
-          v.literal("individual"),
-          v.literal("event_planner"),
-          v.literal("venue"),
-          v.literal("corporate"),
-        ),
+   v.union(v.literal("individual_client"), v.literal("event_planner_client"), v.literal("venue_client"), v.literal("corporate_client"))
+      
       ),
       bookerType: v.optional(
         v.union(v.literal("talent_agent"), v.literal("booking_manager")),
@@ -630,12 +626,7 @@ export const updateUserAsClient = mutation({
       talentbio: v.string(),
       // Client type
       clientType: v.optional(
-        v.union(
-          v.literal("individual"),
-          v.literal("event_planner"),
-          v.literal("venue"),
-          v.literal("corporate"),
-        ),
+  v.union(v.literal("individual_client"), v.literal("event_planner_client"), v.literal("venue_client"), v.literal("corporate_client"))
       ),
       // NEW: Skills array
       skills: v.optional(v.array(v.string())),

@@ -82,7 +82,7 @@ export const userModel = defineTable({
   managedBands: v.optional(v.array(v.string())),
   artistsManaged: v.optional(v.array(v.string())),
   bookerBio: v.optional(v.string()),
-
+skills: v.optional(v.array(v.string())),
   // Musician specific fields
   instrument: v.optional(v.string()),
   experience: v.optional(v.string()),
