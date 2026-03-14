@@ -1,5 +1,5 @@
 // components/payments/PaymentConfirmation.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -14,15 +14,27 @@ import {
   AlertCircle,
   X,
   ScanLine,
+  Sparkles,
+  Shield,
+  CreditCard,
+  Smartphone,
+  Banknote,
+  Landmark,
+  FileText,
+  Image,
+  RefreshCw,
 } from "lucide-react";
-import { ExtractedDataType } from "@/convex/payment";
 
+import { motion, AnimatePresence } from "framer-motion";
+import { ExtractedDataType } from "@/convex/payment";
+import { useQuery } from "convex/react";
 interface PaymentConfirmationProps {
   gigId: string;
   userRole: "musician" | "client";
   gigTitle?: string;
   expectedAmount?: number;
   onConfirmed: () => void;
+  isDarkMode: boolean;
 }
 
 export function PaymentConfirmation({
@@ -31,6 +43,7 @@ export function PaymentConfirmation({
   gigTitle,
   expectedAmount,
   onConfirmed,
+  isDarkMode,
 }: PaymentConfirmationProps) {
   const [amount, setAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<
@@ -51,13 +64,11 @@ export function PaymentConfirmation({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith("image/")) {
       toast.error("Please upload an image file");
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast.error("File size must be less than 5MB");
       return;
@@ -69,11 +80,133 @@ export function PaymentConfirmation({
       setPreview(reader.result as string);
     };
     reader.readAsDataURL(file);
-
-    // Auto-start OCR
     await processOCR(file);
   };
 
+  // Add payment status query to check if already confirmed
+  const paymentStatus = useQuery(api.controllers.payments.getGigPaymentStatus, {
+    gigId: gigId as any,
+  });
+
+  // Check if user has already confirmed
+  const hasUserConfirmed =
+    userRole === "musician"
+      ? paymentStatus?.musicianConfirmed
+      : paymentStatus?.clientConfirmed;
+
+  // Add this state
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    if (paymentStatus !== undefined) {
+      setIsChecking(false);
+    }
+  }, [paymentStatus]);
+
+  // Add this loading UI before the already confirmed check
+  if (isChecking) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <div className="relative">
+          <div
+            className={cn(
+              "w-12 h-12 border-4 rounded-full animate-spin",
+              isDarkMode
+                ? "border-blue-800/30 border-t-blue-500"
+                : "border-blue-200 border-t-blue-600",
+            )}
+          />
+        </div>
+      </div>
+    );
+  }
+  // If already confirmed, show different UI
+  if (hasUserConfirmed) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={cn(
+          "relative overflow-hidden rounded-2xl border p-8 text-center",
+          isDarkMode
+            ? "bg-slate-900/90 border-slate-800"
+            : "bg-white/90 border-slate-200",
+          "backdrop-blur-xl shadow-2xl",
+        )}
+      >
+        {/* Background Decorations */}
+        <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 via-transparent to-emerald-500/5 pointer-events-none" />
+        <div className="absolute -top-24 -right-24 w-48 h-48 bg-green-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl" />
+
+        <div className="relative">
+          <div
+            className={cn(
+              "w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6",
+              isDarkMode ? "bg-green-500/20" : "bg-green-100",
+            )}
+          >
+            <CheckCircle
+              className={cn(
+                "w-10 h-10",
+                isDarkMode ? "text-green-400" : "text-green-600",
+              )}
+            />
+          </div>
+
+          <h3
+            className={cn(
+              "text-2xl font-bold mb-3",
+              isDarkMode ? "text-white" : "text-slate-900",
+            )}
+          >
+            Already Confirmed
+          </h3>
+
+          <p
+            className={cn(
+              "text-base mb-6 max-w-md mx-auto",
+              isDarkMode ? "text-slate-400" : "text-slate-500",
+            )}
+          >
+            You have already confirmed payment for this gig.
+            {paymentStatus?.verified && " It has been verified successfully."}
+            {paymentStatus?.paymentStatus === "disputed" &&
+              " It is currently under dispute."}
+          </p>
+
+          <div className="flex gap-3 justify-center">
+            <Button
+              variant="outline"
+              onClick={() =>
+                (window.location.href = `/hub/gigs?tab=payments&gigId=${gigId}`)
+              }
+              className={cn(
+                "px-6",
+                isDarkMode
+                  ? "border-slate-700 hover:bg-slate-800"
+                  : "border-slate-200 hover:bg-slate-100",
+              )}
+            >
+              View Status
+            </Button>
+
+            {paymentStatus?.paymentStatus === "disputed" && (
+              <Button
+                variant="destructive"
+                onClick={() =>
+                  (window.location.href = `/hub/gigs/${gigId}/dispute`)
+                }
+                className="px-6"
+              >
+                View Dispute
+              </Button>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
   const processOCR = async (file: File) => {
     setOcrProcessing(true);
     try {
@@ -85,13 +218,9 @@ export function PaymentConfirmation({
         body: formData,
       });
 
-      if (!response.ok) {
-        throw new Error("OCR processing failed");
-      }
-
+      if (!response.ok) throw new Error("OCR processing failed");
       const data = await response.json();
 
-      // Handle the OCR result
       const result: ExtractedDataType = {
         transactionId: data.transactionId || null,
         amount: data.amount || undefined,
@@ -106,30 +235,42 @@ export function PaymentConfirmation({
 
       setOcrResult(result);
 
-      // Auto-fill amount if high confidence
       if (result.confidence >= 70 && result.amount) {
         setAmount(result.amount.toString());
         toast.success(`Amount detected: KES ${result.amount}`);
       } else if (result.amount) {
-        toast.warning(
-          `Low confidence (${result.confidence}%). Please verify amount`,
-        );
+        toast.warning(`Low confidence (${result.confidence}%). Please verify`);
       }
 
       setStep("review");
     } catch (error) {
       console.error("OCR error:", error);
-      toast.error("Failed to process image. Please enter details manually.");
-      setStep("review"); // Still allow manual entry
+      toast.error("Failed to process image. Please enter manually.");
+      setStep("review");
     } finally {
       setOcrProcessing(false);
     }
   };
 
   const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 90) return "text-green-600 bg-green-50";
-    if (confidence >= 70) return "text-yellow-600 bg-yellow-50";
-    return "text-red-600 bg-red-50";
+    if (confidence >= 90)
+      return "text-green-500 bg-green-500/10 border-green-500/20";
+    if (confidence >= 70)
+      return "text-yellow-500 bg-yellow-500/10 border-yellow-500/20";
+    return "text-red-500 bg-red-500/10 border-red-500/20";
+  };
+
+  const getPaymentMethodIcon = (method: string) => {
+    switch (method) {
+      case "mpesa":
+        return <Smartphone className="w-4 h-4" />;
+      case "cash":
+        return <Banknote className="w-4 h-4" />;
+      case "bank":
+        return <Landmark className="w-4 h-4" />;
+      default:
+        return <CreditCard className="w-4 h-4" />;
+    }
   };
 
   const handleSubmit = async () => {
@@ -140,7 +281,6 @@ export function PaymentConfirmation({
 
     setUploading(true);
     try {
-      // Upload screenshot to Convex storage
       const uploadUrl = await generateUploadUrl();
       const result = await fetch(uploadUrl, {
         method: "POST",
@@ -151,13 +291,9 @@ export function PaymentConfirmation({
       if (!result.ok) throw new Error("Upload failed");
       const { storageId } = await result.json();
 
-      // Get clerkId from your auth system
       const clerkId = (window as any).Clerk?.user?.id;
-      if (!clerkId) {
-        throw new Error("User not authenticated");
-      }
+      if (!clerkId) throw new Error("User not authenticated");
 
-      // Submit confirmation with OCR data
       await confirmPayment({
         gigId: gigId as any,
         role: userRole,
@@ -201,252 +337,600 @@ export function PaymentConfirmation({
   };
 
   const userLabel =
-    userRole === "musician" ? "I received payment" : "I sent payment";
+    userRole === "musician"
+      ? "Confirm Payment Received"
+      : "Confirm Payment Sent";
 
   return (
-    <div className="space-y-6 p-6 bg-white dark:bg-slate-900 rounded-xl border">
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-full bg-green-100 dark:bg-green-900/30">
-          {userRole === "musician" ? (
-            <CheckCircle className="w-5 h-5 text-green-600" />
-          ) : (
-            <CheckCircle className="w-5 h-5 text-blue-600" />
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={cn(
+        "relative overflow-hidden rounded-2xl border p-6",
+        isDarkMode
+          ? "bg-slate-900/90 border-slate-800"
+          : "bg-white/90 border-slate-200",
+        "backdrop-blur-xl shadow-2xl",
+      )}
+    >
+      {/* Background Decorations */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 pointer-events-none" />
+      <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl" />
+      <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-purple-500/10 rounded-full blur-3xl" />
+
+      {/* Header */}
+      <div className="relative flex items-start gap-4 mb-6">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", delay: 0.1 }}
+          className={cn(
+            "p-3 rounded-xl",
+            userRole === "musician"
+              ? isDarkMode
+                ? "bg-green-500/20"
+                : "bg-green-100"
+              : isDarkMode
+                ? "bg-blue-500/20"
+                : "bg-blue-100",
           )}
-        </div>
-        <div>
-          <h3 className="text-lg text-neutral-500 font-semibold">
+        >
+          {userRole === "musician" ? (
+            <CheckCircle
+              className={cn(
+                "w-6 h-6",
+                isDarkMode ? "text-green-400" : "text-green-600",
+              )}
+            />
+          ) : (
+            <CheckCircle
+              className={cn(
+                "w-6 h-6",
+                isDarkMode ? "text-blue-400" : "text-blue-600",
+              )}
+            />
+          )}
+        </motion.div>
+
+        <div className="flex-1">
+          <h3
+            className={cn(
+              "text-xl font-semibold",
+              isDarkMode ? "text-white" : "text-slate-900",
+            )}
+          >
             {userLabel}
           </h3>
-          <p className="text-sm text-slate-500">
+          <p
+            className={cn(
+              "text-sm mt-1",
+              isDarkMode ? "text-slate-400" : "text-slate-500",
+            )}
+          >
             {step === "upload"
-              ? "Upload screenshot for automatic detection"
-              : "Review detected information"}
+              ? "Upload a screenshot and we'll auto-detect the details"
+              : "Review the detected information and confirm"}
           </p>
+        </div>
+
+        {/* Step Indicator */}
+        <div
+          className={cn(
+            "px-3 py-1.5 rounded-full text-xs font-medium",
+            isDarkMode
+              ? "bg-slate-800 text-slate-300"
+              : "bg-slate-100 text-slate-600",
+          )}
+        >
+          Step {step === "upload" ? "1" : "2"} of 2
         </div>
       </div>
 
+      {/* Expected Amount Banner */}
       {expectedAmount && (
-        <div className="p-3 bg-blue-50 rounded-lg">
-          <p className="text-sm text-blue-700">
-            Expected amount: KES {expectedAmount.toLocaleString()}
-          </p>
-        </div>
-      )}
-
-      {step === "upload" ? (
-        <div className="space-y-4">
-          {/* Screenshot Upload */}
-          <div>
-            <Label htmlFor="screenshot">Transaction Screenshot</Label>
-            <div className="mt-1">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => document.getElementById("screenshot")?.click()}
-                className="w-full h-32 border-dashed flex flex-col items-center justify-center gap-2"
-                disabled={ocrProcessing}
-              >
-                {ocrProcessing ? (
-                  <>
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
-                    <span className="text-sm text-slate-500">
-                      Processing OCR...
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <Camera className="w-8 h-8 text-slate-400" />
-                    <span className="text-sm text-slate-500">
-                      Click to upload screenshot
-                    </span>
-                    <span className="text-xs text-slate-400">
-                      We'll auto-detect payment details
-                    </span>
-                  </>
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className={cn(
+            "relative mb-6 p-4 rounded-xl border overflow-hidden",
+            isDarkMode
+              ? "bg-blue-500/10 border-blue-500/20"
+              : "bg-blue-50 border-blue-200",
+          )}
+        >
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-transparent" />
+          <div className="relative flex items-center gap-3">
+            <Sparkles
+              className={cn(
+                "w-5 h-5",
+                isDarkMode ? "text-blue-400" : "text-blue-600",
+              )}
+            />
+            <div>
+              <p
+                className={cn(
+                  "text-sm font-medium",
+                  isDarkMode ? "text-blue-400" : "text-blue-700",
                 )}
-              </Button>
-              <input
-                id="screenshot"
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-                disabled={ocrProcessing}
-              />
+              >
+                Expected Amount
+              </p>
+              <p
+                className={cn(
+                  "text-lg font-bold",
+                  isDarkMode ? "text-white" : "text-slate-900",
+                )}
+              >
+                KES {expectedAmount.toLocaleString()}
+              </p>
             </div>
           </div>
+        </motion.div>
+      )}
 
-          {preview && (
-            <div className="mt-2 relative">
-              <img
-                src={preview}
-                alt="Preview"
-                className="max-h-40 rounded-lg border mx-auto"
-              />
-              <Button
-                size="sm"
-                variant="ghost"
-                className="absolute top-1 right-1"
-                onClick={resetUpload}
+      <AnimatePresence mode="wait">
+        {step === "upload" ? (
+          <motion.div
+            key="upload"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="space-y-6"
+          >
+            {/* Upload Area */}
+            <div>
+              <Label
+                className={cn(
+                  "text-sm font-medium mb-2 block",
+                  isDarkMode ? "text-slate-300" : "text-slate-700",
+                )}
               >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {/* OCR Results */}
-          {ocrResult && (
-            <div className="p-4 bg-slate-50 rounded-lg space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ScanLine className="w-4 h-4 text-blue-600" />
-                  <span className="font-medium">OCR Detection Results</span>
-                </div>
-                <span
-                  className={`text-xs px-2 py-1 rounded ${getConfidenceColor(ocrResult.confidence)}`}
+                Payment Screenshot
+              </Label>
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="relative"
+              >
+                <input
+                  id="screenshot"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  disabled={ocrProcessing}
+                />
+                <label
+                  htmlFor="screenshot"
+                  className={cn(
+                    "relative block w-full cursor-pointer rounded-xl border-2 border-dashed p-8 transition-all",
+                    "group",
+                    isDarkMode
+                      ? "border-slate-700 hover:border-blue-500/50 bg-slate-800/50"
+                      : "border-slate-200 hover:border-blue-500/50 bg-slate-50/50",
+                    ocrProcessing && "pointer-events-none opacity-50",
+                  )}
                 >
-                  Confidence: {ocrResult.confidence}%
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="text-slate-500">Transaction ID</p>
-                  <p className="font-mono font-medium">
-                    {ocrResult.transactionId || "Not detected"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-slate-500">Amount</p>
-                  <p>
-                    {ocrResult.amount
-                      ? `KES ${ocrResult.amount}`
-                      : "Not detected"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-slate-500">Date</p>
-                  <p>{ocrResult.date || "Not detected"}</p>
-                </div>
-                <div>
-                  <p className="text-slate-500">Time</p>
-                  <p>{ocrResult.time || "Not detected"}</p>
-                </div>
-                {ocrResult.sender && (
-                  <div>
-                    <p className="text-slate-500">Sender</p>
-                    <p>{ocrResult.sender}</p>
+                  <div className="flex flex-col items-center gap-3">
+                    {ocrProcessing ? (
+                      <>
+                        <div className="relative">
+                          <div className="w-12 h-12 rounded-full border-4 border-blue-500/30 border-t-blue-500 animate-spin" />
+                          <RefreshCw className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-5 h-5 text-blue-500 animate-pulse" />
+                        </div>
+                        <div className="text-center">
+                          <p
+                            className={cn(
+                              "font-medium",
+                              isDarkMode ? "text-white" : "text-slate-900",
+                            )}
+                          >
+                            Processing OCR...
+                          </p>
+                          <p
+                            className={cn(
+                              "text-sm mt-1",
+                              isDarkMode ? "text-slate-400" : "text-slate-500",
+                            )}
+                          >
+                            Extracting payment details
+                          </p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div
+                          className={cn(
+                            "p-3 rounded-full transition-colors",
+                            isDarkMode
+                              ? "bg-slate-700 group-hover:bg-slate-600"
+                              : "bg-slate-200 group-hover:bg-slate-300",
+                          )}
+                        >
+                          <Camera
+                            className={cn(
+                              "w-6 h-6",
+                              isDarkMode ? "text-slate-300" : "text-slate-600",
+                            )}
+                          />
+                        </div>
+                        <div className="text-center">
+                          <p
+                            className={cn(
+                              "font-medium",
+                              isDarkMode ? "text-white" : "text-slate-900",
+                            )}
+                          >
+                            Click to upload screenshot
+                          </p>
+                          <p
+                            className={cn(
+                              "text-sm mt-1",
+                              isDarkMode ? "text-slate-400" : "text-slate-500",
+                            )}
+                          >
+                            PNG, JPG up to 5MB
+                          </p>
+                        </div>
+                      </>
+                    )}
                   </div>
-                )}
-                {ocrResult.receiver && (
-                  <div>
-                    <p className="text-slate-500">Receiver</p>
-                    <p>{ocrResult.receiver}</p>
-                  </div>
-                )}
-              </div>
+                </label>
+              </motion.div>
+            </div>
 
-              {ocrResult.confidence < 70 && (
-                <div className="flex items-center gap-2 p-2 bg-yellow-50 rounded text-sm">
-                  <AlertCircle className="w-4 h-4 text-yellow-600" />
-                  <span className="text-yellow-700">
-                    Low confidence - please verify all details
+            {/* Preview */}
+            {preview && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="relative group"
+              >
+                <div
+                  className={cn(
+                    "absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity",
+                  )}
+                />
+                <img
+                  src={preview}
+                  alt="Preview"
+                  className="w-full max-h-48 object-contain rounded-xl border"
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={resetUpload}
+                  className="absolute top-2 right-2"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </motion.div>
+            )}
+          </motion.div>
+        ) : (
+          <motion.div
+            key="review"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="space-y-6"
+          >
+            {/* OCR Results Card */}
+            {ocrResult && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={cn(
+                  "rounded-xl border p-5",
+                  isDarkMode
+                    ? "bg-slate-800/50 border-slate-700"
+                    : "bg-slate-50 border-slate-200",
+                )}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <ScanLine
+                      className={cn(
+                        "w-5 h-5",
+                        isDarkMode ? "text-blue-400" : "text-blue-600",
+                      )}
+                    />
+                    <span
+                      className={cn(
+                        "font-medium",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
+                      OCR Detection
+                    </span>
+                  </div>
+                  <span
+                    className={cn(
+                      "text-xs px-2 py-1 rounded-full border",
+                      getConfidenceColor(ocrResult.confidence),
+                    )}
+                  >
+                    {ocrResult.confidence}% Confidence
                   </span>
                 </div>
-              )}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p
+                      className={cn(
+                        "text-xs",
+                        isDarkMode ? "text-slate-400" : "text-slate-500",
+                      )}
+                    >
+                      Transaction ID
+                    </p>
+                    <p
+                      className={cn(
+                        "font-mono text-sm font-medium",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
+                      {ocrResult.transactionId || "—"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p
+                      className={cn(
+                        "text-xs",
+                        isDarkMode ? "text-slate-400" : "text-slate-500",
+                      )}
+                    >
+                      Amount
+                    </p>
+                    <p
+                      className={cn(
+                        "text-sm font-medium",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
+                      {ocrResult.amount ? `KES ${ocrResult.amount}` : "—"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p
+                      className={cn(
+                        "text-xs",
+                        isDarkMode ? "text-slate-400" : "text-slate-500",
+                      )}
+                    >
+                      Date
+                    </p>
+                    <p
+                      className={cn(
+                        "text-sm",
+                        isDarkMode ? "text-slate-300" : "text-slate-700",
+                      )}
+                    >
+                      {ocrResult.date || "—"}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p
+                      className={cn(
+                        "text-xs",
+                        isDarkMode ? "text-slate-400" : "text-slate-500",
+                      )}
+                    >
+                      Time
+                    </p>
+                    <p
+                      className={cn(
+                        "text-sm",
+                        isDarkMode ? "text-slate-300" : "text-slate-700",
+                      )}
+                    >
+                      {ocrResult.time || "—"}
+                    </p>
+                  </div>
+                </div>
+
+                {ocrResult.confidence < 70 && (
+                  <div className="mt-4 flex items-center gap-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <AlertCircle className="w-4 h-4 text-yellow-600" />
+                    <span className="text-sm text-yellow-700">
+                      Low confidence - please verify all details
+                    </span>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Amount Input */}
+            <div className="space-y-2">
+              <Label
+                className={isDarkMode ? "text-slate-300" : "text-slate-700"}
+              >
+                Amount (KES)
+              </Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400">
+                  KES
+                </span>
+                <Input
+                  type="number"
+                  placeholder="0.00"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className={cn(
+                    "pl-12 h-12 text-lg",
+                    isDarkMode
+                      ? "bg-slate-800 border-slate-700 text-white"
+                      : "bg-white border-slate-200 text-slate-900",
+                  )}
+                />
+              </div>
             </div>
-          )}
 
-          {/* Amount - Manual Entry */}
-          <div>
-            <Label htmlFor="amount">
-              Amount (KES) {ocrResult?.amount && "(Verified or Correct Below)"}
-            </Label>
-            <Input
-              id="amount"
-              type="number"
-              placeholder="e.g., 25000"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="mt-1"
-            />
-          </div>
+            {/* Payment Method */}
+            <div className="space-y-3">
+              <Label
+                className={isDarkMode ? "text-slate-300" : "text-slate-700"}
+              >
+                Payment Method
+              </Label>
+              <RadioGroup
+                value={paymentMethod}
+                onValueChange={(v: any) => setPaymentMethod(v)}
+                className="grid grid-cols-2 gap-3"
+              >
+                {[
+                  { value: "mpesa", label: "M-Pesa", icon: Smartphone },
+                  { value: "cash", label: "Cash", icon: Banknote },
+                  { value: "bank", label: "Bank", icon: Landmark },
+                  { value: "other", label: "Other", icon: CreditCard },
+                ].map((method) => (
+                  <div key={method.value}>
+                    <RadioGroupItem
+                      value={method.value}
+                      id={method.value}
+                      className="peer sr-only"
+                    />
+                    <label
+                      htmlFor={method.value}
+                      className={cn(
+                        "flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all",
+                        "peer-checked:border-blue-500 peer-checked:bg-blue-500/10",
+                        isDarkMode
+                          ? "border-slate-700 hover:border-slate-600"
+                          : "border-slate-200 hover:border-slate-300",
+                        paymentMethod === method.value &&
+                          "border-blue-500 bg-blue-500/10",
+                      )}
+                    >
+                      <method.icon
+                        className={cn(
+                          "w-4 h-4",
+                          paymentMethod === method.value
+                            ? "text-blue-500"
+                            : isDarkMode
+                              ? "text-slate-400"
+                              : "text-slate-500",
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          "text-sm",
+                          isDarkMode ? "text-slate-300" : "text-slate-700",
+                        )}
+                      >
+                        {method.label}
+                      </span>
+                    </label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
 
-          {/* Payment Method */}
-          <div>
-            <Label>Payment Method</Label>
-            <RadioGroup
-              value={paymentMethod}
-              onValueChange={(v: any) => setPaymentMethod(v)}
-              className="mt-2 grid grid-cols-2 gap-2"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="mpesa" id="mpesa" />
-                <Label htmlFor="mpesa">M-Pesa</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="cash" id="cash" />
-                <Label htmlFor="cash">Cash</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="bank" id="bank" />
-                <Label htmlFor="bank">Bank Transfer</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="other" id="other" />
-                <Label htmlFor="other">Other</Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          {/* Notes */}
-          <div>
-            <Label htmlFor="notes">Notes (Optional)</Label>
-            <Input
-              id="notes"
-              placeholder="Any additional info..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="mt-1"
-            />
-          </div>
-
-          {/* Preview */}
-          {preview && (
-            <div className="mt-2">
-              <p className="text-sm text-slate-500 mb-1">Screenshot:</p>
-              <img
-                src={preview}
-                alt="Preview"
-                className="max-h-20 rounded-lg border"
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label
+                className={isDarkMode ? "text-slate-300" : "text-slate-700"}
+              >
+                Notes (Optional)
+              </Label>
+              <Input
+                placeholder="Add any additional notes..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className={cn(
+                  isDarkMode
+                    ? "bg-slate-800 border-slate-700 text-white"
+                    : "bg-white border-slate-200 text-slate-900",
+                )}
               />
             </div>
-          )}
 
-          {/* Action Buttons */}
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={resetUpload} className="flex-1">
-              Back
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={uploading || !amount}
-              className="flex-1"
-            >
-              {uploading ? (
-                <>Confirming...</>
-              ) : (
-                <>
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Confirm Payment
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
+            {/* Preview */}
+            {preview && (
+              <div className="space-y-2">
+                <Label
+                  className={isDarkMode ? "text-slate-300" : "text-slate-700"}
+                >
+                  Screenshot Preview
+                </Label>
+                <div className="relative group">
+                  <img
+                    src={preview}
+                    alt="Preview"
+                    className="w-full h-24 object-cover rounded-lg border"
+                  />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={resetUpload}
+                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={resetUpload}
+                className={cn(
+                  "flex-1 h-12",
+                  isDarkMode
+                    ? "border-slate-700 hover:bg-slate-800 text-slate-300"
+                    : "border-slate-200 hover:bg-slate-100 text-slate-700",
+                )}
+              >
+                Back
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={uploading || !amount}
+                className={cn(
+                  "flex-1 h-12 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                )}
+              >
+                {uploading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Confirming...</span>
+                  </div>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Confirm Payment
+                  </>
+                )}
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Security Badge */}
+      <div className="relative mt-6 flex items-center justify-center gap-2">
+        <Shield
+          className={cn(
+            "w-3 h-3",
+            isDarkMode ? "text-slate-600" : "text-slate-400",
+          )}
+        />
+        <span
+          className={cn(
+            "text-xs",
+            isDarkMode ? "text-slate-500" : "text-slate-400",
+          )}
+        >
+          End-to-end encrypted • Secure payment verification
+        </span>
+      </div>
+    </motion.div>
   );
+}
+
+function cn(...classes: any[]) {
+  return classes.filter(Boolean).join(" ");
 }

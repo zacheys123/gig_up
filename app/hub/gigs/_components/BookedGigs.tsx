@@ -87,6 +87,7 @@ import {
 } from "@/components/ui/dialog";
 import { Info } from "lucide-react";
 import { GiSpiralThrust } from "react-icons/gi";
+import { useRouter } from "next/navigation";
 // Types
 type DisplayMode = "grid" | "timeline" | "list" | "calendar" | "kanban";
 type ViewFilter = "all" | "client" | "musician";
@@ -818,6 +819,35 @@ export const BookedGigs = ({ user }: { user: any }) => {
       setIsCancelling(false);
     }
   };
+  const router = useRouter();
+
+  const handlePaymentNavigation = (gig: any) => {
+    const dateStatus = getGigDateStatus(gig.date, gig.time);
+
+    // Only allow payment if gig date has passed
+    if (dateStatus.exactPast) {
+      // Navigate to payments tab with the gig ID in URL
+      router.push(`/hub/gigs?tab=payments&gigId=${gig._id}&action=confirm`);
+    } else {
+      toast.info("Payment confirmation will be available after the gig date");
+    }
+  };
+
+  // Add this render function for payment button
+  const renderPaymentButton = (gig: any, dateStatus: any) => {
+    if (!dateStatus.exactPast) return null;
+
+    return (
+      <Button
+        size="sm"
+        onClick={() => handlePaymentNavigation(gig)}
+        className="bg-green-600 hover:bg-green-700 text-white text-xs gap-1"
+      >
+        <DollarSign className="w-3 h-3" />
+        Confirm Payment
+      </Button>
+    );
+  };
 
   // Modern Grid View - Clean cards with subtle interactions
   const renderGridView = () => (
@@ -932,37 +962,61 @@ export const BookedGigs = ({ user }: { user: any }) => {
 
                 {/* Footer actions */}
                 <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      (window.location.href = `/hub/gigs/musician/${gig._id}/gig-info`)
-                    }
-                    className={cn(
-                      "text-xs gap-1 px-2",
-                      isDarkMode
-                        ? "text-slate-400 hover:text-white"
-                        : "text-slate-500 hover:text-slate-900",
-                    )}
-                  >
-                    View details
-                    <ChevronRight className="w-3 h-3" />
-                  </Button>
+                  {dateStatus.exactPast ? (
+                    <div className="flex items-center gap-2 w-full">
+                      {renderPaymentButton(gig, dateStatus)}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          (window.location.href = `/hub/gigs/musician/${gig._id}/gig-info`)
+                        }
+                        className={cn(
+                          "text-xs gap-1 px-2 ml-auto",
+                          isDarkMode
+                            ? "text-slate-400 hover:text-white"
+                            : "text-slate-500 hover:text-slate-900",
+                        )}
+                      >
+                        Details
+                        <Eye className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          (window.location.href = `/hub/gigs/musician/${gig._id}/gig-info`)
+                        }
+                        className={cn(
+                          "text-xs gap-1 px-2",
+                          isDarkMode
+                            ? "text-slate-400 hover:text-white"
+                            : "text-slate-500 hover:text-slate-900",
+                        )}
+                      >
+                        View details
+                        <ChevronRight className="w-3 h-3" />
+                      </Button>
 
-                  {userRole.canCancel && !dateStatus.exactPast && (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => openCancelDialog(gig)}
-                      className={cn(
-                        "text-xs text-rose-500 hover:text-rose-600 px-2",
-                        isDarkMode
-                          ? "hover:bg-rose-950/30"
-                          : "hover:bg-rose-50",
+                      {userRole.canCancel && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => openCancelDialog(gig)}
+                          className={cn(
+                            "text-xs text-rose-500 hover:text-rose-600 px-2",
+                            isDarkMode
+                              ? "hover:bg-rose-950/30"
+                              : "hover:bg-rose-50",
+                          )}
+                        >
+                          Cancel Gig
+                        </Button>
                       )}
-                    >
-                      Cancel Gig
-                    </Button>
+                    </>
                   )}
                 </div>
               </CardContent>
@@ -1054,25 +1108,36 @@ export const BookedGigs = ({ user }: { user: any }) => {
 
                   {/* Actions */}
                   <div className="flex items-center gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() =>
-                        (window.location.href = `/hub/gigs/musician/${gig._id}/gig-info`)
-                      }
-                      className="h-8 w-8 p-0"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
+                    {dateStatus.exactPast ? (
+                      <Button
+                        size="sm"
+                        onClick={() => handlePaymentNavigation(gig)}
+                        className="bg-green-600 hover:bg-green-700 text-white h-7 px-2 text-xs"
+                      >
+                        <DollarSign className="w-3 h-3 mr-1" />
+                        Pay
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() =>
+                          (window.location.href = `/hub/gigs/musician/${gig._id}/gig-info`)
+                        }
+                        className="h-7 w-7 p-0"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
 
                     {userRole.canCancel && !dateStatus.exactPast && (
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={() => openCancelDialog(gig)}
-                        className="h-8 w-8 p-0 text-rose-500"
+                        className="h-7 w-7 p-0 text-rose-500"
                       >
-                        <XCircle className="w-4 h-4" />
+                        <XCircle className="w-3.5 h-3.5" />
                       </Button>
                     )}
                   </div>
@@ -1185,7 +1250,6 @@ export const BookedGigs = ({ user }: { user: any }) => {
                     </span>
                   )}
                 </div>
-
                 <p
                   className={cn(
                     "text-sm line-clamp-2 mb-4",
@@ -1195,32 +1259,46 @@ export const BookedGigs = ({ user }: { user: any }) => {
                   {gig.description || "No description"}
                 </p>
 
-                <div className="flex items-center gap-3">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      (window.location.href = `/hub/gigs/musician/${gig._id}/gig-info`)
-                    }
-                    className={cn(
-                      "text-xs",
-                      isDarkMode
-                        ? "border-slate-700 text-slate-300"
-                        : "border-slate-200 text-slate-600",
-                    )}
-                  >
-                    View details
-                  </Button>
+                <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800">
+                  {dateStatus.exactPast ? (
+                    <div className="flex items-center gap-2">
+                      {renderPaymentButton(gig, dateStatus)}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          (window.location.href = `/hub/gigs/musician/${gig._id}/gig-info`)
+                        }
+                        className={cn(
+                          "text-xs gap-1 px-2",
+                          isDarkMode
+                            ? "text-slate-400 hover:text-white"
+                            : "text-slate-500 hover:text-slate-900",
+                        )}
+                      >
+                        View details
+                        <ChevronRight className="w-3 h-3" />
+                      </Button>
 
-                  {userRole.canCancel && !dateStatus.exactPast && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => openCancelDialog(gig)}
-                      className="text-xs text-rose-500"
-                    >
-                      Cancel
-                    </Button>
+                      {userRole.canCancel && !dateStatus.exactPast && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => openCancelDialog(gig)}
+                          className={cn(
+                            "text-xs text-rose-500 hover:text-rose-600 px-2",
+                            isDarkMode
+                              ? "hover:bg-rose-950/30"
+                              : "hover:bg-rose-50",
+                          )}
+                        >
+                          Cancel Gig
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </div>
               </CardContent>

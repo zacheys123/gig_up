@@ -43,7 +43,6 @@ interface PaymentHistoryProps {
 }
 
 export const PaymentHistory = ({ user, isDarkMode }: PaymentHistoryProps) => {
-  const [selectedGigId, setSelectedGigId] = useState<Id<"gigs"> | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -55,7 +54,20 @@ export const PaymentHistory = ({ user, isDarkMode }: PaymentHistoryProps) => {
       includeAll: true,
     },
   );
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const [selectedGigId, setSelectedGigId] = useState<Id<"gigs"> | null>(null);
+  const [autoConfirm, setAutoConfirm] = useState(false);
 
+  useEffect(() => {
+    const gigId = searchParams.get("gigId");
+    const action = searchParams.get("action");
+
+    if (gigId && action === "confirm") {
+      setSelectedGigId(gigId as Id<"gigs">);
+      setAutoConfirm(true);
+    }
+  }, [searchParams]);
   if (!userGigs) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -121,7 +133,7 @@ export const PaymentHistory = ({ user, isDarkMode }: PaymentHistoryProps) => {
     ).length,
     disputed: bookedGigs.filter((g) => g.paymentStatus === "disputed").length,
   };
-
+  // In your return, when showing PaymentHub, pass autoConfirm prop
   if (selectedGigId) {
     return (
       <motion.div
@@ -134,7 +146,12 @@ export const PaymentHistory = ({ user, isDarkMode }: PaymentHistoryProps) => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => setSelectedGigId(null)}
+            onClick={() => {
+              setSelectedGigId(null);
+              setAutoConfirm(false);
+              // Remove params from URL when going back
+              router.push("/hub/gigs?tab=payments");
+            }}
             className={cn(
               "gap-1",
               isDarkMode ? "hover:bg-slate-800" : "hover:bg-slate-100",
@@ -144,7 +161,11 @@ export const PaymentHistory = ({ user, isDarkMode }: PaymentHistoryProps) => {
             Back to Gigs
           </Button>
         </div>
-        <PaymentHub gigId={selectedGigId} userId={user._id} />
+        <PaymentHub
+          gigId={selectedGigId}
+          userId={user._id}
+          autoOpenConfirm={autoConfirm} // Pass the prop
+        />
       </motion.div>
     );
   }
