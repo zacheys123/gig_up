@@ -1,204 +1,59 @@
-// convex/controllers/payments.ts
-import { mutation } from "../_generated/server";
+// convex/payments.ts
 import { v } from "convex/values";
-import { Id } from "../_generated/dataModel";
+import { mutation, query } from "../_generated/server";
+import { Doc, Id } from "../_generated/dataModel";
+import { extractedDataValidator } from "../payment";
 
-export interface ExtractedPaymentData {
-  transactionId: string | null;
-  amount: number | null;
-  date: string | null;
-  time: string | null;
-  phoneNumber: string | null;
-  sender: string | null;
-  receiver: string | null;
-  fullText: string;
-  confidence: number;
-}
-
-export interface PaymentConfirmation {
-  confirmed: boolean;
-  confirmedAt: number;
-  amount: number;
-  paymentMethod: "mpesa" | "cash" | "bank" | "other";
-  screenshot: string;
-  notes?: string;
-  extractedData?: ExtractedPaymentData;
-}
-
-// 🔥 THIS IS YOUR COMPARISON FUNCTION 🔥
-export function compareConfirmations(
-  musicianConfirm: PaymentConfirmation,
-  clientConfirm: PaymentConfirmation,
-  extractedMusician?: ExtractedPaymentData | null,
-  extractedClient?: ExtractedPaymentData | null,
-) {
-  if (!musicianConfirm || !clientConfirm) {
-    return {
-      match: false,
-      reason: "Missing confirmation from one or both parties",
-      code: "MISSING_CONFIRMATION",
-    };
-  }
-
-  const results = {
-    match: true,
-    reasons: [] as string[],
-    details: {} as any,
-  };
-
-  // Compare amounts from user input
-  if (musicianConfirm.amount !== clientConfirm.amount) {
-    results.match = false;
-    results.reasons.push(
-      `Amount mismatch: Musician KES ${musicianConfirm.amount}, Client KES ${clientConfirm.amount}`,
-    );
-    results.details.amountMismatch = {
-      musician: musicianConfirm.amount,
-      client: clientConfirm.amount,
-    };
-  }
-
-  // Compare payment methods
-  if (musicianConfirm.paymentMethod !== clientConfirm.paymentMethod) {
-    results.match = false;
-    results.reasons.push(
-      `Payment method mismatch: ${musicianConfirm.paymentMethod} vs ${clientConfirm.paymentMethod}`,
-    );
-    results.details.methodMismatch = {
-      musician: musicianConfirm.paymentMethod,
-      client: clientConfirm.paymentMethod,
-    };
-  }
-
-  // Compare OCR extracted data if available
-  if (extractedMusician && extractedClient) {
-    // Compare transaction IDs
-    if (extractedMusician.transactionId && extractedClient.transactionId) {
-      if (extractedMusician.transactionId !== extractedClient.transactionId) {
-        results.match = false;
-        results.reasons.push(`Transaction ID mismatch`);
-        results.details.transactionMismatch = {
-          musician: extractedMusician.transactionId,
-          client: extractedClient.transactionId,
-        };
-      }
-    }
-
-    // Compare amounts from OCR
-    if (extractedMusician.amount && extractedClient.amount) {
-      if (Math.abs(extractedMusician.amount - extractedClient.amount) > 0.01) {
-        results.match = false;
-        results.reasons.push(`OCR amount mismatch`);
-        results.details.ocrAmountMismatch = {
-          musician: extractedMusician.amount,
-          client: extractedClient.amount,
-        };
-      }
-    }
-
-    // Check OCR confidence
-    if (extractedMusician.confidence < 70 || extractedClient.confidence < 70) {
-      results.reasons.push(
-        `Low OCR confidence: Musician ${extractedMusician.confidence}%, Client ${extractedClient.confidence}%`,
-      );
-      results.details.lowConfidence = {
-        musician: extractedMusician.confidence,
-        client: extractedClient.confidence,
-      };
-    }
-  }
-
-  // Check if both confirmations are positive
-  if (!musicianConfirm.confirmed || !clientConfirm.confirmed) {
-    results.match = false;
-    results.reasons.push(
-      !musicianConfirm.confirmed
-        ? "Musician has not confirmed"
-        : "Client has not confirmed",
-    );
-  }
-
-  return {
-    match: results.match,
-    reason: results.reasons.join(". "),
-    reasons: results.reasons,
-    details: results.details,
-    extractedData: {
-      musician: extractedMusician,
-      client: extractedClient,
-    },
-  };
-}
-// Helper to create notifications
-async function createPaymentNotification(
+// Helper to send gig mail
+async function sendGigMail(
   ctx: any,
   args: {
-    userDocumentId: Id<"users">;
+    userId: Id<"users">;
+    senderId?: Id<"users">;
+    gigId?: Id<"gigs">;
     type:
-      | "payment_confirmed_musician"
-      | "payment_confirmed_client"
+      | "payment_confirmed"
       | "payment_verified"
       | "payment_dispute"
-      | "payment_reminder";
-    title: string;
+      | "payment_reminder"
+      | "gig_completed";
+    subject: string;
     message: string;
-    gigId: Id<"gigs">;
-    relatedUserDocumentId?: Id<"users">;
+    amount?: number;
+    transactionId?: string | null;
+    paymentMethod?: string;
+    extractedData?: any;
+    requiresAction?: boolean;
+    actionUrl?: string;
+    actionLabel?: string;
     metadata?: any;
-    image?: string;
   },
 ) {
-  // Get gig for image if not provided
-  let image = args.image;
-  if (!image) {
-    const gig = await ctx.db.get(args.gigId);
-    image = gig?.logo;
-  }
-
-  // Get user's notification settings
-  const settings = await ctx.db
-    .query("notificationSettings")
-    .withIndex("by_userId", (q: any) =>
-      q.eq("userId", args.userDocumentId.toString()),
-    )
-    .first();
-
-  // Map notification type to setting key
-  const typeToSetting = {
-    payment_confirmed_musician: "paymentConfirmations",
-    payment_confirmed_client: "paymentConfirmations",
-    payment_verified: "paymentConfirmations",
-    payment_dispute: "paymentDisputes",
-    payment_reminder: "paymentConfirmations",
-  };
-
-  const settingKey = typeToSetting[args.type];
-
-  // Check if user has this notification type disabled
-  if (settings && settings[settingKey as keyof typeof settings] === false) {
-    return;
-  }
-
-  await ctx.db.insert("notifications", {
-    userId: args.userDocumentId.toString(),
+  await ctx.db.insert("gigMail", {
+    userId: args.userId,
+    senderId: args.senderId,
+    gigId: args.gigId,
     type: args.type,
-    title: args.title,
+    subject: args.subject,
     message: args.message,
-    image: image,
-    actionUrl: `/hub/gigs/musician/${args.gigId}/gig-info`,
-    actionLabel: "View Payment Details",
-    relatedGigId: args.gigId.toString(),
-    relatedUserId: args.relatedUserDocumentId?.toString(),
-    metadata: {
-      ...args.metadata,
-      gigId: args.gigId.toString(),
-    },
+    amount: args.amount,
+    transactionId: args.transactionId ?? undefined,
+    paymentMethod: args.paymentMethod,
+    extractedData: args.extractedData,
     isRead: false,
     isArchived: false,
+    requiresAction: args.requiresAction,
+    actionUrl: args.actionUrl,
+    actionLabel: args.actionLabel,
+    metadata: args.metadata,
     createdAt: Date.now(),
   });
 }
 
+// Main payment confirmation mutation
+// convex/controllers/payments.ts
+
+// Main payment confirmation mutation
 export const confirmPayment = mutation({
   args: {
     gigId: v.id("gigs"),
@@ -211,29 +66,16 @@ export const confirmPayment = mutation({
       v.literal("bank"),
       v.literal("other"),
     ),
-    clerkId: v.optional(v.string()),
-    screenshot: v.string(), // Storage ID
+    clerkId: v.string(),
+    screenshot: v.string(),
     notes: v.optional(v.string()),
-    // Add extracted data from OCR API route
-    extractedData: v.optional(
-      v.object({
-        transactionId: v.union(v.string(), v.null()),
-        amount: v.optional(v.number()),
-        date: v.optional(v.string()),
-        time: v.optional(v.string()),
-        phoneNumber: v.optional(v.string()),
-        sender: v.optional(v.string()),
-        receiver: v.optional(v.string()),
-        fullText: v.optional(v.string()),
-        confidence: v.number(),
-      }),
-    ),
+    extractedData: v.optional(extractedDataValidator),
   },
   handler: async (ctx, args) => {
     // Get current user
     const currentUser = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId as string))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
     if (!currentUser) throw new Error("User not found");
 
@@ -241,41 +83,22 @@ export const confirmPayment = mutation({
     const gig = await ctx.db.get(args.gigId);
     if (!gig) throw new Error("Gig not found");
 
-    // Get the other party (for notifications)
-    const clientUser = await ctx.db.get(gig.postedBy);
-    let musicianUser = null;
-
-    // Find musician(s) - check if current user is booked or in band roles
+    // Verify user is part of this gig
     const isMusician =
+      gig.bookedBy === currentUser._id ||
       gig.bandCategory?.some((role: any) =>
         role.bookedUsers?.includes(currentUser._id),
-      ) || gig.bookedBy === currentUser._id;
-
+      );
     const isClient = gig.postedBy === currentUser._id;
 
-    // Find the other party
-    if (gig.bookedBy) {
-      musicianUser = await ctx.db.get(gig.bookedBy);
-    } else if (gig.bandCategory) {
-      // Find first booked musician in band roles
-      for (const role of gig.bandCategory) {
-        if (role.bookedUsers && role.bookedUsers.length > 0) {
-          musicianUser = await ctx.db.get(role.bookedUsers[0]);
-          break;
-        }
-      }
-    }
-
-    // Verify user is part of this gig
     if (args.role === "musician" && !isMusician) {
       throw new Error("You are not a musician for this gig");
     }
-
     if (args.role === "client" && !isClient) {
       throw new Error("You are not the client for this gig");
     }
 
-    // Create confirmation object with extracted data
+    // Create confirmation object
     const confirmation = {
       gigId: args.gigId,
       confirmed: args.confirmed,
@@ -284,7 +107,7 @@ export const confirmPayment = mutation({
       paymentMethod: args.paymentMethod,
       screenshot: args.screenshot,
       notes: args.notes,
-      extractedData: args.extractedData, // Store OCR results from client
+      extractedData: args.extractedData,
     };
 
     // Update the gig with confirmation
@@ -293,40 +116,36 @@ export const confirmPayment = mutation({
         musicianConfirmPayment: confirmation,
       });
 
-      // Notify client that musician confirmed
-      if (clientUser) {
-        await createPaymentNotification(ctx, {
-          userDocumentId: clientUser._id,
-          type: "payment_confirmed_client",
-          title: "💰 Payment Confirmed by Musician",
-          message: `${currentUser.firstname || currentUser.username} confirmed receiving payment of KES ${args.amount} for ${gig.title}`,
-          gigId: args.gigId,
-          relatedUserDocumentId: currentUser._id,
-          image: currentUser.picture,
-          metadata: {
-            amount: args.amount,
-            paymentMethod: args.paymentMethod,
-            role: "musician",
-            confirmedAt: Date.now(),
-            transactionId: args.extractedData?.transactionId,
-            confidence: args.extractedData?.confidence,
-          },
-        });
-      }
-
-      // Notify musician that they successfully confirmed
-      await createPaymentNotification(ctx, {
-        userDocumentId: currentUser._id,
-        type: "payment_confirmed_musician",
-        title: "✅ Payment Confirmation Submitted",
-        message: `You've confirmed receiving KES ${args.amount} for ${gig.title}. Waiting for client confirmation.`,
+      // Send mail to client
+      await sendGigMail(ctx, {
+        userId: gig.postedBy,
+        senderId: currentUser._id,
         gigId: args.gigId,
-        metadata: {
-          amount: args.amount,
-          paymentMethod: args.paymentMethod,
-          confirmedAt: Date.now(),
-          transactionId: args.extractedData?.transactionId,
-        },
+        type: "payment_confirmed",
+        subject: "💰 Payment Confirmed by Musician",
+        message: `${currentUser.firstname || currentUser.username} confirmed receiving payment of KES ${args.amount} for ${gig.title}`,
+        amount: args.amount,
+        paymentMethod: args.paymentMethod,
+        transactionId: args.extractedData?.transactionId,
+        extractedData: args.extractedData,
+        requiresAction: true,
+        actionUrl: `/hub/gigs/${args.gigId}/payment`,
+        actionLabel: "View Details",
+      });
+
+      // Send mail to musician
+      await sendGigMail(ctx, {
+        userId: currentUser._id,
+        gigId: args.gigId,
+        type: "payment_confirmed",
+        subject: "✅ Your Payment Confirmation",
+        message: `You've confirmed receiving KES ${args.amount} for ${gig.title}. Waiting for client confirmation.`,
+        amount: args.amount,
+        paymentMethod: args.paymentMethod,
+        transactionId: args.extractedData?.transactionId,
+        extractedData: args.extractedData,
+        actionUrl: `/hub/gigs/${args.gigId}/payment`,
+        actionLabel: "Track Status",
       });
     } else {
       // Client confirmation
@@ -334,40 +153,38 @@ export const confirmPayment = mutation({
         clientConfirmPayment: confirmation,
       });
 
-      // Notify musician that client confirmed
-      if (musicianUser) {
-        await createPaymentNotification(ctx, {
-          userDocumentId: musicianUser._id,
-          type: "payment_confirmed_musician",
-          title: "💰 Payment Confirmed by Client",
-          message: `${currentUser.firstname || currentUser.username} confirmed sending payment of KES ${args.amount} for ${gig.title}. Please verify.`,
+      // Send mail to musician
+      if (gig.bookedBy) {
+        await sendGigMail(ctx, {
+          userId: gig.bookedBy,
+          senderId: currentUser._id,
           gigId: args.gigId,
-          relatedUserDocumentId: currentUser._id,
-          image: currentUser.picture,
-          metadata: {
-            amount: args.amount,
-            paymentMethod: args.paymentMethod,
-            role: "client",
-            confirmedAt: Date.now(),
-            transactionId: args.extractedData?.transactionId,
-            confidence: args.extractedData?.confidence,
-          },
+          type: "payment_confirmed",
+          subject: "💰 Payment Confirmed by Client",
+          message: `${currentUser.firstname || currentUser.username} confirmed sending payment of KES ${args.amount} for ${gig.title}. Please verify.`,
+          amount: args.amount,
+          paymentMethod: args.paymentMethod,
+          transactionId: args.extractedData?.transactionId,
+          extractedData: args.extractedData,
+          requiresAction: true,
+          actionUrl: `/hub/gigs/${args.gigId}/payment`,
+          actionLabel: "Verify Payment",
         });
       }
 
-      // Notify client they successfully confirmed
-      await createPaymentNotification(ctx, {
-        userDocumentId: currentUser._id,
-        type: "payment_confirmed_client",
-        title: "✅ Payment Confirmation Submitted",
-        message: `You've confirmed sending KES ${args.amount} for ${gig.title}. Waiting for musician confirmation.`,
+      // Send mail to client
+      await sendGigMail(ctx, {
+        userId: currentUser._id,
         gigId: args.gigId,
-        metadata: {
-          amount: args.amount,
-          paymentMethod: args.paymentMethod,
-          confirmedAt: Date.now(),
-          transactionId: args.extractedData?.transactionId,
-        },
+        type: "payment_confirmed",
+        subject: "✅ Your Payment Confirmation",
+        message: `You've confirmed sending KES ${args.amount} for ${gig.title}. Waiting for musician confirmation.`,
+        amount: args.amount,
+        paymentMethod: args.paymentMethod,
+        transactionId: args.extractedData?.transactionId,
+        extractedData: args.extractedData,
+        actionUrl: `/hub/gigs/${args.gigId}/payment`,
+        actionLabel: "Track Status",
       });
     }
 
@@ -377,482 +194,616 @@ export const confirmPayment = mutation({
       updatedGig?.musicianConfirmPayment &&
       updatedGig?.clientConfirmPayment
     ) {
+      // Get both confirmations
       const musicianConfirm = updatedGig.musicianConfirmPayment;
       const clientConfirm = updatedGig.clientConfirmPayment;
-      // In your confirmPayment mutation handler
 
-      // Get the extracted data from both confirmations
-      const musicianData = musicianConfirm.extractedData;
-      const clientData = clientConfirm.extractedData;
+      // 1. Compare amounts
+      const amountMatch = musicianConfirm.amount === clientConfirm.amount;
 
-      // Transform the data to match ExtractedPaymentData exactly (no undefined, only string | null)
-      const transformExtractedData = (
-        data: typeof musicianData,
-      ): ExtractedPaymentData | undefined => {
-        if (!data) return undefined;
+      // 2. Compare transaction IDs (handle null/undefined safely)
+      const musicianTx = musicianConfirm.extractedData?.transactionId;
+      const clientTx = clientConfirm.extractedData?.transactionId;
 
-        return {
-          // Map all fields to ensure no undefined values
-          transactionId:
-            data.transactionId === undefined ? null : data.transactionId,
-          amount: data.amount === undefined ? null : data.amount,
-          date: data.date === undefined ? null : data.date,
-          time: data.time === undefined ? null : data.time,
-          phoneNumber: data.phoneNumber === undefined ? null : data.phoneNumber,
-          sender: data.sender === undefined ? null : data.sender,
-          receiver: data.receiver === undefined ? null : data.receiver,
-          fullText: data.fullText || "", // fullText is required in interface, provide default
-          confidence: data.confidence, // confidence is required in interface
-        };
-      };
+      // Transaction IDs match if both exist and are equal, OR if both are missing/null
+      const txMatch =
+        musicianTx && clientTx
+          ? musicianTx === clientTx // Both exist, compare them
+          : !musicianTx && !clientTx; // Both missing/null is considered a match
 
-      // Now also need to transform the PaymentConfirmation objects themselves
-      const transformPaymentConfirmation = (
-        confirmation: typeof musicianConfirm,
-      ): PaymentConfirmation => {
-        return {
-          confirmed: confirmation.confirmed,
-          confirmedAt: confirmation.confirmedAt,
-          amount: confirmation.amount,
-          paymentMethod: confirmation.paymentMethod,
-          screenshot: confirmation.screenshot,
-          notes: confirmation.notes,
-          extractedData: transformExtractedData(confirmation.extractedData),
-        };
-      };
+      // 3. Check confidence thresholds
+      const musicianConfidence = musicianConfirm.extractedData?.confidence || 0;
+      const clientConfidence = clientConfirm.extractedData?.confidence || 0;
+      const confidenceOk = musicianConfidence >= 70 && clientConfidence >= 70;
 
-      // 🔥 CALL THE COMPARISON FUNCTION WITH TRANSFORMED OBJECTS
-      const comparison = compareConfirmations(
-        transformPaymentConfirmation(musicianConfirm),
-        transformPaymentConfirmation(clientConfirm),
-        transformExtractedData(musicianData),
-        transformExtractedData(clientData),
-      );
+      // 4. Final match determination
+      const match = amountMatch && txMatch && confidenceOk;
 
-      console.log("Payment comparison result:", comparison);
+      // Build reason for mismatch
+      let reason = "";
+      if (!amountMatch) reason += "Amount mismatch. ";
+      if (!txMatch) reason += "Transaction ID mismatch. ";
+      if (!confidenceOk) reason += "Low OCR confidence. ";
 
-      // Use SYSTEM user ID
-      const SYSTEM_USER_ID = "SYSTEM" as Id<"users">;
-
-      // Helper function to safely get extracted data for verification
-      function getSafeExtractedData(comparison: any, defaultAmount: number) {
-        if (!comparison.extractedData) return undefined;
-
-        const musician = comparison.extractedData.musician;
-        const client = comparison.extractedData.client;
-
-        // Use musician data if available, otherwise client data
-        const primaryData = musician || client;
-
-        if (!primaryData) return undefined;
-
-        return {
-          timestamp: Date.now(),
-          amount: primaryData.amount || defaultAmount,
-          transactionId: primaryData.transactionId || "",
-          sender: primaryData.sender || "",
-          receiver: primaryData.receiver || "",
-        };
-      }
-
-      // Update payment verification with comparison results
+      // Update payment verification
       await ctx.db.patch(args.gigId, {
         paymentVerification: {
           gigId: args.gigId,
           verifiedAt: Date.now(),
-          verifiedBy: SYSTEM_USER_ID,
-          match: comparison.match,
-          extractedData: getSafeExtractedData(comparison, args.amount),
-          notes: comparison.reason,
+          verifiedBy: "SYSTEM" as any,
+          match: match,
+          notes: match
+            ? "Payment verified automatically"
+            : reason || "Payment details mismatch",
           ocrConfidence: {
-            musician: comparison.extractedData?.musician?.confidence ?? 0,
-            client: comparison.extractedData?.client?.confidence ?? 0,
+            musician: musicianConfidence,
+            client: clientConfidence,
           },
         },
-        paymentStatus: comparison.match ? "verified_paid" : "disputed",
+        paymentStatus: match ? "verified_paid" : "disputed",
       });
 
-      // Handle verification result based on comparison
-      if (comparison.match) {
-        // ✅ Amounts match - notify both parties
-        if (musicianUser) {
-          await createPaymentNotification(ctx, {
-            userDocumentId: musicianUser._id,
-            type: "payment_verified",
-            title: "🎉 Payment Verified!",
-            message: `Payment of KES ${musicianConfirm.amount} for ${gig.title} has been automatically verified. Transaction complete.`,
-            gigId: args.gigId,
-            image: gig.logo,
-            metadata: {
-              amount: musicianConfirm.amount,
-              verified: true,
-              method: "auto-ocr",
-              transactionId: musicianData?.transactionId,
+      // ========== HANDLE MATCH ==========
+      if (match) {
+        // Update musician stats
+        if (gig.bookedBy) {
+          const musician = await ctx.db.get(gig.bookedBy);
+          await ctx.db.patch(gig.bookedBy, {
+            earnings: (musician?.earnings || 0) + musicianConfirm.amount,
+            completedGigsCount: (musician?.completedGigsCount || 0) + 1,
+            userearnings:
+              (musician?.userearnings || 0) + musicianConfirm.amount,
+            // Update performance stats
+            performanceStats: {
+              totalGigsCompleted:
+                (musician?.performanceStats?.totalGigsCompleted || 0) + 1,
+              onTimeRate: musician?.performanceStats?.onTimeRate || 100,
+              clientSatisfaction:
+                musician?.performanceStats?.clientSatisfaction || 100,
+              responseTime: musician?.performanceStats?.responseTime,
+              lastUpdated: Date.now(),
             },
           });
         }
 
-        if (clientUser) {
-          await createPaymentNotification(ctx, {
-            userDocumentId: clientUser._id,
-            type: "payment_verified",
-            title: "🎉 Payment Verified!",
-            message: `Payment of KES ${clientConfirm.amount} for ${gig.title} has been automatically verified. Transaction complete.`,
-            gigId: args.gigId,
-            image: gig.logo,
-            metadata: {
-              amount: clientConfirm.amount,
-              verified: true,
-              method: "auto-ocr",
-              transactionId: clientData?.transactionId,
+        // Update client stats
+        const client = await ctx.db.get(gig.postedBy);
+        await ctx.db.patch(gig.postedBy, {
+          totalSpent: (client?.totalSpent || 0) + clientConfirm.amount,
+          // Track this booking in their history
+          bookedByClients: [
+            ...(client?.bookedByClients || []),
+            {
+              clientId: gig.postedBy,
+              gigId: args.gigId,
+              date: Date.now(),
             },
+          ],
+        });
+
+        // Send verification mails
+        if (gig.bookedBy) {
+          await sendGigMail(ctx, {
+            userId: gig.bookedBy,
+            gigId: args.gigId,
+            type: "payment_verified",
+            subject: "🎉 Payment Verified!",
+            message: `Payment of KES ${musicianConfirm.amount} for ${gig.title} has been verified. Transaction complete.`,
+            amount: musicianConfirm.amount,
+            transactionId: musicianConfirm.extractedData?.transactionId,
+            extractedData: musicianConfirm.extractedData,
+            actionUrl: `/hub/gigs/${args.gigId}`,
+            actionLabel: "View Gig",
           });
         }
-      } else {
-        // ⚠️ Amount mismatch or OCR detected issues - dispute
-        const disputeReason =
-          comparison.reason || "Payment details don't match";
 
-        if (musicianUser) {
-          await createPaymentNotification(ctx, {
-            userDocumentId: musicianUser._id,
+        await sendGigMail(ctx, {
+          userId: gig.postedBy,
+          gigId: args.gigId,
+          type: "payment_verified",
+          subject: "🎉 Payment Verified!",
+          message: `Payment of KES ${clientConfirm.amount} for ${gig.title} has been verified. Transaction complete.`,
+          amount: clientConfirm.amount,
+          transactionId: clientConfirm.extractedData?.transactionId,
+          extractedData: clientConfirm.extractedData,
+          actionUrl: `/hub/gigs/${args.gigId}`,
+          actionLabel: "View Gig",
+        });
+      }
+      // ========== HANDLE MISMATCH/DISPUTE ==========
+      else {
+        // Update musician dispute count
+        if (gig.bookedBy) {
+          const musician = await ctx.db.get(gig.bookedBy);
+          await ctx.db.patch(gig.bookedBy, {
+            disputesCount: (musician?.disputesCount || 0) + 1,
+          });
+        }
+
+        // Update client dispute count
+        const client = await ctx.db.get(gig.postedBy);
+        await ctx.db.patch(gig.postedBy, {
+          disputesCount: (client?.disputesCount || 0) + 1,
+        });
+
+        // Send dispute mails to musician
+        if (gig.bookedBy) {
+          await sendGigMail(ctx, {
+            userId: gig.bookedBy,
+            gigId: args.gigId,
             type: "payment_dispute",
-            title: "⚠️ Payment Dispute Detected",
-            message: `There's a discrepancy in payment for ${gig.title}. ${disputeReason}. Our team will review.`,
-            gigId: args.gigId,
-            image: gig.logo,
+            subject: "⚠️ Payment Dispute",
+            message: `There's a payment discrepancy for ${gig.title}. ${reason}Our team will review.`,
+            amount: musicianConfirm.amount,
+            transactionId: musicianConfirm.extractedData?.transactionId,
+            extractedData: musicianConfirm.extractedData,
+            requiresAction: true,
+            actionUrl: `/hub/gigs/${args.gigId}/dispute`,
+            actionLabel: "View Dispute",
             metadata: {
               musicianAmount: musicianConfirm.amount,
               clientAmount: clientConfirm.amount,
-              musicianTransactionId: musicianData?.transactionId,
-              clientTransactionId: clientData?.transactionId,
-              dispute: true,
-              reasons: comparison.reasons,
-              details: comparison.details,
+              musicianTx: musicianTx,
+              clientTx: clientTx,
+              musicianConfidence: musicianConfidence,
+              clientConfidence: clientConfidence,
+              reason: reason.trim(),
+              amountMatch,
+              txMatch,
+              confidenceOk,
             },
           });
         }
 
-        if (clientUser) {
-          await createPaymentNotification(ctx, {
-            userDocumentId: clientUser._id,
-            type: "payment_dispute",
-            title: "⚠️ Payment Dispute Detected",
-            message: `There's a discrepancy in payment for ${gig.title}. ${disputeReason}. Our team will review.`,
-            gigId: args.gigId,
-            image: gig.logo,
-            metadata: {
-              musicianAmount: musicianConfirm.amount,
-              clientAmount: clientConfirm.amount,
-              musicianTransactionId: musicianData?.transactionId,
-              clientTransactionId: clientData?.transactionId,
-              dispute: true,
-              reasons: comparison.reasons,
-              details: comparison.details,
-            },
-          });
-        }
+        // Send dispute mails to client
+        await sendGigMail(ctx, {
+          userId: gig.postedBy,
+          gigId: args.gigId,
+          type: "payment_dispute",
+          subject: "⚠️ Payment Dispute",
+          message: `There's a payment discrepancy for ${gig.title}. ${reason}Our team will review.`,
+          amount: clientConfirm.amount,
+          transactionId: clientConfirm.extractedData?.transactionId,
+          extractedData: clientConfirm.extractedData,
+          requiresAction: true,
+          actionUrl: `/hub/gigs/${args.gigId}/dispute`,
+          actionLabel: "View Dispute",
+          metadata: {
+            musicianAmount: musicianConfirm.amount,
+            clientAmount: clientConfirm.amount,
+            musicianTx: musicianTx,
+            clientTx: clientTx,
+            musicianConfidence: musicianConfidence,
+            clientConfidence: clientConfidence,
+            reason: reason.trim(),
+            amountMatch,
+            txMatch,
+            confidenceOk,
+          },
+        });
       }
     }
 
     return {
       success: true,
-      role: args.role,
       bothConfirmed: !!(
         updatedGig?.musicianConfirmPayment && updatedGig?.clientConfirmPayment
       ),
-      extractedData: args.extractedData,
     };
   },
 });
 
-export const verifyPayment = mutation({
+// Mark mail as read
+export const markGigMailAsRead = mutation({
   args: {
-    gigId: v.id("gigs"),
-    verifiedAt: v.number(),
-    match: v.boolean(),
-    extractedData: v.optional(
-      v.object({
-        transactionId: v.string(),
-        amount: v.number(),
-        sender: v.string(),
-        receiver: v.string(),
-        timestamp: v.number(),
-      }),
-    ),
-    notes: v.optional(v.string()),
+    mailId: v.id("gigMail"),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    // Get admin user (or whoever is verifying)
-    const adminUser = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
-      .first();
-
-    if (!adminUser) throw new Error("User not found");
-
-    const gig = await ctx.db.get(args.gigId);
-    if (!gig) throw new Error("Gig not found");
-
-    // Verify both confirmations exist
-    if (!gig.musicianConfirmPayment || !gig.clientConfirmPayment) {
-      throw new Error("Both parties must confirm first");
-    }
-
-    // Add verification
-    await ctx.db.patch(args.gigId, {
-      paymentVerification: {
-        gigId: args.gigId,
-        verifiedAt: args.verifiedAt,
-        verifiedBy: adminUser._id,
-        match: args.match,
-        extractedData: args.extractedData,
-        notes: args.notes,
-      },
-      paymentStatus: args.match ? "verified_paid" : "disputed",
+    await ctx.db.patch(args.mailId, {
+      isRead: true,
+      readAt: Date.now(),
     });
-
-    // Get users for notifications
-    const musicianUser = gig.bookedBy ? await ctx.db.get(gig.bookedBy) : null;
-    const clientUser = await ctx.db.get(gig.postedBy);
-
-    if (args.match) {
-      // Verification passed
-      if (musicianUser) {
-        await createPaymentNotification(ctx, {
-          userDocumentId: musicianUser._id,
-          type: "payment_verified",
-          title: "✅ Payment Officially Verified",
-          message: `Your payment for ${gig.title} has been officially verified by our team. Thank you!`,
-          gigId: args.gigId,
-          image: gig.logo,
-          metadata: {
-            amount: gig.musicianConfirmPayment.amount,
-            verifiedBy: "admin",
-            verifiedAt: args.verifiedAt,
-          },
-        });
-      }
-
-      if (clientUser) {
-        await createPaymentNotification(ctx, {
-          userDocumentId: clientUser._id,
-          type: "payment_verified",
-          title: "✅ Payment Officially Verified",
-          message: `Your payment for ${gig.title} has been officially verified by our team. Thank you!`,
-          gigId: args.gigId,
-          image: gig.logo,
-          metadata: {
-            amount: gig.clientConfirmPayment.amount,
-            verifiedBy: "admin",
-            verifiedAt: args.verifiedAt,
-          },
-        });
-      }
-    } else {
-      // Verification failed
-      if (musicianUser) {
-        await createPaymentNotification(ctx, {
-          userDocumentId: musicianUser._id,
-          type: "payment_dispute",
-          title: "❌ Payment Verification Failed",
-          message: `We couldn't verify your payment for ${gig.title}. ${args.notes || "Please contact support."}`,
-          gigId: args.gigId,
-          image: gig.logo,
-          metadata: {
-            amount: gig.musicianConfirmPayment.amount,
-            reason: args.notes,
-            verifiedBy: "admin",
-          },
-        });
-      }
-
-      if (clientUser) {
-        await createPaymentNotification(ctx, {
-          userDocumentId: clientUser._id,
-          type: "payment_dispute",
-          title: "❌ Payment Verification Failed",
-          message: `We couldn't verify your payment for ${gig.title}. ${args.notes || "Please contact support."}`,
-          gigId: args.gigId,
-          image: gig.logo,
-          metadata: {
-            amount: gig.clientConfirmPayment.amount,
-            reason: args.notes,
-            verifiedBy: "admin",
-          },
-        });
-      }
-    }
-
-    return { success: true, match: args.match };
   },
 });
 
-export const sendPaymentReminder = mutation({
+// convex/controllers/payments.ts
+
+export const getGigPaymentStatus = query({
   args: {
     gigId: v.id("gigs"),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
     const gig = await ctx.db.get(args.gigId);
-    if (!gig) throw new Error("Gig not found");
+    if (!gig) return null;
 
-    const clientUser = await ctx.db.get(gig.postedBy);
-
-    if (clientUser && !gig.clientConfirmPayment) {
-      await createPaymentNotification(ctx, {
-        userDocumentId: clientUser._id,
-        type: "payment_reminder",
-        title: "⏰ Payment Reminder",
-        message: `Please remember to confirm payment for ${gig.title} if you haven't already.`,
-        gigId: args.gigId,
-        image: gig.logo,
-        metadata: {
-          reminder: true,
-          dueDate: gig.date,
-        },
-      });
-    }
-
-    // Also remind musician if needed
-    if (gig.bookedBy) {
-      const musicianUser = await ctx.db.get(gig.bookedBy);
-      if (musicianUser && !gig.musicianConfirmPayment) {
-        await createPaymentNotification(ctx, {
-          userDocumentId: musicianUser._id,
-          type: "payment_reminder",
-          title: "⏰ Payment Reminder",
-          message: `Please remember to confirm receiving payment for ${gig.title} if you haven't already.`,
-          gigId: args.gigId,
-          image: gig.logo,
-          metadata: {
-            reminder: true,
-            dueDate: gig.date,
-          },
-        });
-      }
-    }
-
-    return { success: true };
-  },
-});
-
-export const getPaymentStatus = mutation({
-  args: {
-    gigId: v.id("gigs"),
-  },
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
-      .first();
-
-    if (!user) throw new Error("User not found");
-
-    const gig = await ctx.db.get(args.gigId);
-    if (!gig) throw new Error("Gig not found");
-
-    // Determine user's role in this gig
-    let role = null;
-    if (gig.postedBy === user._id) {
-      role = "client";
-    } else if (
-      gig.bandCategory?.some((r: any) => r.bookedUsers?.includes(user._id)) ||
-      gig.bookedBy === user._id
-    ) {
-      role = "musician";
-    }
-    if (!gig?.musicianConfirmPayment)
-      throw new Error("musicianConfirmPayment not found");
-    // Helper functions for transformation (same as in confirmPayment)
-    const toExtractedPaymentData = (
-      data: typeof gig.musicianConfirmPayment.extractedData,
-    ): ExtractedPaymentData | undefined => {
-      if (!data) return undefined;
-
-      return {
-        transactionId:
-          data.transactionId === undefined ? null : data.transactionId,
-        amount: data.amount === undefined ? null : data.amount,
-        date: data.date === undefined ? null : data.date,
-        time: data.time === undefined ? null : data.time,
-        phoneNumber: data.phoneNumber === undefined ? null : data.phoneNumber,
-        sender: data.sender === undefined ? null : data.sender,
-        receiver: data.receiver === undefined ? null : data.receiver,
-        fullText: data.fullText || "",
-        confidence: data.confidence,
-      };
-    };
-
-    const toPaymentConfirmation = (
-      confirmation: typeof gig.musicianConfirmPayment,
-    ): PaymentConfirmation | undefined => {
-      if (!confirmation) return undefined;
-
-      return {
-        confirmed: confirmation.confirmed,
-        confirmedAt: confirmation.confirmedAt,
-        amount: confirmation.amount,
-        paymentMethod: confirmation.paymentMethod,
-        screenshot: confirmation.screenshot,
-        notes: confirmation.notes,
-        extractedData: toExtractedPaymentData(confirmation.extractedData),
-      };
-    };
-
-    // Calculate auto-verification if both confirmations exist
-    let autoVerification = null;
-    if (
-      gig.musicianConfirmPayment?.extractedData &&
-      gig.clientConfirmPayment?.extractedData &&
-      !gig.paymentVerification
-    ) {
-      // Transform the data before passing to compareConfirmations
-      const musicianConfirm = toPaymentConfirmation(gig.musicianConfirmPayment);
-      const clientConfirm = toPaymentConfirmation(gig.clientConfirmPayment);
-      const musicianData = toExtractedPaymentData(
-        gig.musicianConfirmPayment.extractedData,
-      );
-      const clientData = toExtractedPaymentData(
-        gig.clientConfirmPayment.extractedData,
-      );
-
-      // 🔥 USE COMPARISON FUNCTION WITH TRANSFORMED DATA
-      const comparison = compareConfirmations(
-        musicianConfirm!,
-        clientConfirm!,
-        musicianData,
-        clientData,
-      );
-
-      autoVerification = {
-        match: comparison.match,
-        reason: comparison.reason,
-        ocrConfidence: {
-          musician: gig.musicianConfirmPayment.extractedData?.confidence || 0,
-          client: gig.clientConfirmPayment.extractedData?.confidence || 0,
-        },
-      };
-    }
+    // Get user info for display
+    const musician = gig.bookedBy ? await ctx.db.get(gig.bookedBy) : null;
+    const client = await ctx.db.get(gig.postedBy);
 
     return {
-      role,
+      gigId: gig._id,
+      gigTitle: gig.title,
       musicianConfirmed: !!gig.musicianConfirmPayment,
       clientConfirmed: !!gig.clientConfirmPayment,
       verified: !!gig.paymentVerification,
-      verificationMatch: gig.paymentVerification?.match,
-      musicianConfirm: gig.musicianConfirmPayment,
-      clientConfirm: gig.clientConfirmPayment,
-      verification: gig.paymentVerification,
-      autoVerification,
+      match: gig.paymentVerification?.match,
+      paymentStatus: gig.paymentStatus,
+      // Return the FULL musicianConfirm object with extractedData
+      musicianConfirm: gig.musicianConfirmPayment
+        ? {
+            amount: gig.musicianConfirmPayment.amount,
+            method: gig.musicianConfirmPayment.paymentMethod,
+            confirmedAt: gig.musicianConfirmPayment.confirmedAt,
+            transactionId:
+              gig.musicianConfirmPayment.extractedData?.transactionId,
+            confidence: gig.musicianConfirmPayment.extractedData?.confidence,
+            // ADD THIS - include the full extractedData object
+            extractedData: gig.musicianConfirmPayment.extractedData
+              ? {
+                  transactionId:
+                    gig.musicianConfirmPayment.extractedData.transactionId,
+                  amount: gig.musicianConfirmPayment.extractedData.amount,
+                  date: gig.musicianConfirmPayment.extractedData.date,
+                  time: gig.musicianConfirmPayment.extractedData.time,
+                  phoneNumber:
+                    gig.musicianConfirmPayment.extractedData.phoneNumber,
+                  sender: gig.musicianConfirmPayment.extractedData.sender,
+                  receiver: gig.musicianConfirmPayment.extractedData.receiver,
+                  fullText: gig.musicianConfirmPayment.extractedData.fullText,
+                  confidence:
+                    gig.musicianConfirmPayment.extractedData.confidence,
+                }
+              : null,
+          }
+        : null,
+      // Return the FULL clientConfirm object with extractedData
+      clientConfirm: gig.clientConfirmPayment
+        ? {
+            amount: gig.clientConfirmPayment.amount,
+            method: gig.clientConfirmPayment.paymentMethod,
+            confirmedAt: gig.clientConfirmPayment.confirmedAt,
+            transactionId:
+              gig.clientConfirmPayment.extractedData?.transactionId,
+            confidence: gig.clientConfirmPayment.extractedData?.confidence,
+            // ADD THIS - include the full extractedData object
+            extractedData: gig.clientConfirmPayment.extractedData
+              ? {
+                  transactionId:
+                    gig.clientConfirmPayment.extractedData.transactionId,
+                  amount: gig.clientConfirmPayment.extractedData.amount,
+                  date: gig.clientConfirmPayment.extractedData.date,
+                  time: gig.clientConfirmPayment.extractedData.time,
+                  phoneNumber:
+                    gig.clientConfirmPayment.extractedData.phoneNumber,
+                  sender: gig.clientConfirmPayment.extractedData.sender,
+                  receiver: gig.clientConfirmPayment.extractedData.receiver,
+                  fullText: gig.clientConfirmPayment.extractedData.fullText,
+                  confidence: gig.clientConfirmPayment.extractedData.confidence,
+                }
+              : null,
+          }
+        : null,
+      verification: gig.paymentVerification
+        ? {
+            match: gig.paymentVerification.match,
+            verifiedAt: gig.paymentVerification.verifiedAt,
+            notes: gig.paymentVerification.notes,
+            ocrConfidence: gig.paymentVerification.ocrConfidence,
+          }
+        : null,
+      musician: musician
+        ? {
+            name: musician.firstname || musician.username,
+            picture: musician.picture,
+          }
+        : null,
+      client: client
+        ? {
+            name: client.firstname || client.username,
+            picture: client.picture,
+          }
+        : null,
     };
+  },
+});
+
+// Get user's payment summary
+export const getUserPaymentSummary = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    // Get all gigs where user is involved
+    let gigs: Doc<"gigs">[] = [];
+
+    if (user.isMusician) {
+      const musicianGigs = await ctx.db
+        .query("gigs")
+        .filter((q) =>
+          q.or(
+            q.eq(q.field("bookedBy"), args.userId),
+            q.neq(q.field("bandCategory"), undefined),
+          ),
+        )
+        .collect();
+
+      gigs = [
+        ...gigs,
+        ...musicianGigs.filter(
+          (g) =>
+            g.bookedBy === args.userId ||
+            g.bandCategory?.some((r: any) =>
+              r.bookedUsers?.includes(args.userId),
+            ),
+        ),
+      ];
+    }
+
+    if (user.isClient) {
+      const clientGigs = await ctx.db
+        .query("gigs")
+        .withIndex("by_postedBy", (q) => q.eq("postedBy", args.userId))
+        .collect();
+
+      gigs = [...gigs, ...clientGigs];
+    }
+
+    // Deduplicate
+    gigs = gigs.filter((g, i, a) => a.findIndex((t) => t._id === g._id) === i);
+
+    // Calculate summary
+    let totalEarned = 0;
+    let totalPaid = 0;
+    let pendingAmount = 0;
+    let verifiedAmount = 0;
+    let disputedAmount = 0;
+    let unreadMails = 0;
+
+    // Get unread count
+    unreadMails = await ctx.db
+      .query("gigMail")
+      .withIndex("by_userId_unread", (q) =>
+        q.eq("userId", args.userId).eq("isRead", false),
+      )
+      .collect()
+      .then((m) => m.length);
+
+    for (const gig of gigs) {
+      const isGigMusician =
+        gig.bookedBy === args.userId ||
+        gig.bandCategory?.some((r: any) =>
+          r.bookedUsers?.includes(args.userId),
+        );
+
+      if (isGigMusician && gig.musicianConfirmPayment) {
+        totalEarned += gig.musicianConfirmPayment.amount;
+
+        if (gig.paymentVerification?.match) {
+          verifiedAmount += gig.musicianConfirmPayment.amount;
+        } else if (gig.paymentStatus === "disputed") {
+          disputedAmount += gig.musicianConfirmPayment.amount;
+        } else if (!gig.clientConfirmPayment) {
+          pendingAmount += gig.musicianConfirmPayment.amount;
+        }
+      }
+
+      if (gig.postedBy === args.userId && gig.clientConfirmPayment) {
+        totalPaid += gig.clientConfirmPayment.amount;
+
+        if (gig.paymentVerification?.match) {
+          verifiedAmount += gig.clientConfirmPayment.amount;
+        } else if (gig.paymentStatus === "disputed") {
+          disputedAmount += gig.clientConfirmPayment.amount;
+        } else if (!gig.musicianConfirmPayment) {
+          pendingAmount += gig.clientConfirmPayment.amount;
+        }
+      }
+    }
+
+    return {
+      summary: {
+        totalEarned,
+        totalPaid,
+        pendingAmount,
+        verifiedAmount,
+        disputedAmount,
+        netBalance: totalEarned - totalPaid,
+      },
+      counts: {
+        totalGigs: gigs.length,
+        verifiedGigs: gigs.filter((g) => g.paymentVerification?.match).length,
+        disputedGigs: gigs.filter((g) => g.paymentStatus === "disputed").length,
+        pendingGigs: gigs.filter(
+          (g) =>
+            (g.musicianConfirmPayment || g.clientConfirmPayment) &&
+            !g.paymentVerification,
+        ).length,
+        unreadMails,
+      },
+    };
+  },
+});
+// convex/payments.ts (add these queries)
+
+// Get unread count for user
+export const getUnreadCount = query({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const mails = await ctx.db
+      .query("gigMail")
+      .withIndex("by_userId_unread", (q) =>
+        q.eq("userId", args.userId).eq("isRead", false),
+      )
+      .collect();
+
+    return mails.length;
+  },
+});
+
+// Get gig mail for a specific gig
+export const getGigMail = query({
+  args: {
+    userId: v.id("users"),
+    gigId: v.optional(v.id("gigs")),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    let query = ctx.db
+      .query("gigMail")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .order("desc");
+
+    if (args.gigId) {
+      query = ctx.db
+        .query("gigMail")
+        .withIndex("by_gigId", (q) => q.eq("gigId", args.gigId))
+        .order("desc");
+    }
+
+    const mails = await query.take(args.limit || 50);
+
+    // Enhance with sender info if needed
+    return Promise.all(
+      mails.map(async (mail) => {
+        if (mail.senderId) {
+          const sender = await ctx.db.get(mail.senderId);
+          return {
+            ...mail,
+            senderName: sender?.firstname || sender?.username,
+            senderPicture: sender?.picture,
+          };
+        }
+        return mail;
+      }),
+    );
+  },
+});
+// convex/gigs.ts (add or update this query)
+
+// convex/controllers/payments.ts
+
+export const getUserGigsWithPaymentStatus = query({
+  args: {
+    userId: v.id("users"),
+    includeAll: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) return [];
+
+    let gigs: Doc<"gigs">[] = [];
+
+    // Get gigs where user is musician
+    if (user.isMusician) {
+      // Get directly booked gigs
+      const bookedGigs = await ctx.db
+        .query("gigs")
+        .withIndex("by_bookedBy", (q) => q.eq("bookedBy", args.userId))
+        .collect();
+
+      // Get all gigs with bandCategory
+      const allGigs = await ctx.db
+        .query("gigs")
+        .filter((q) => q.neq(q.field("bandCategory"), undefined))
+        .collect();
+
+      // Filter band gigs where user is in bookedUsers
+      const bandGigs = allGigs.filter((gig) =>
+        gig.bandCategory?.some((role: any) =>
+          role.bookedUsers?.includes(args.userId),
+        ),
+      );
+
+      gigs = [...gigs, ...bookedGigs, ...bandGigs];
+    }
+
+    // Get gigs where user is client
+    if (user.isClient) {
+      const clientGigs = await ctx.db
+        .query("gigs")
+        .withIndex("by_postedBy", (q) => q.eq("postedBy", args.userId))
+        .collect();
+
+      gigs = [...gigs, ...clientGigs];
+    }
+
+    // Deduplicate by ID
+    const uniqueGigs = Array.from(
+      new Map(gigs.map((gig) => [gig._id.toString(), gig])).values(),
+    );
+
+    // Sort by most recent
+    uniqueGigs.sort((a, b) => {
+      const dateA = a.date || a.createdAt;
+      const dateB = b.date || b.createdAt;
+      return dateB - dateA;
+    });
+
+    // Filter for payment activity if needed
+    if (!args.includeAll) {
+      return uniqueGigs.filter(
+        (gig) =>
+          gig.musicianConfirmPayment ||
+          gig.clientConfirmPayment ||
+          gig.paymentVerification,
+      );
+    }
+
+    // Return all gigs with payment status info
+    return uniqueGigs.map((gig) => {
+      // Determine if current user is musician for this gig
+      const isGigMusician =
+        gig.bookedBy === args.userId ||
+        gig.bandCategory?.some((role: any) =>
+          role.bookedUsers?.includes(args.userId),
+        );
+
+      const isGigClient = gig.postedBy === args.userId;
+
+      // Determine which amount to show
+      let displayAmount = null;
+      if (isGigMusician) {
+        displayAmount = gig.musicianConfirmPayment?.amount || gig.price;
+      } else if (isGigClient) {
+        displayAmount = gig.clientConfirmPayment?.amount || gig.price;
+      }
+
+      // Calculate payment status
+      let paymentStatus = "pending";
+      if (gig.paymentVerification?.match) {
+        paymentStatus = "verified";
+      } else if (gig.musicianConfirmPayment && gig.clientConfirmPayment) {
+        paymentStatus = "both_confirmed";
+      } else if (gig.musicianConfirmPayment) {
+        paymentStatus = "musician_confirmed";
+      } else if (gig.clientConfirmPayment) {
+        paymentStatus = "client_confirmed";
+      }
+
+      return {
+        ...gig,
+        displayAmount,
+        paymentStatus,
+        myRole: isGigMusician ? "musician" : isGigClient ? "client" : null,
+        needsAction: isGigMusician
+          ? !gig.musicianConfirmPayment && !!gig.clientConfirmPayment
+          : isGigClient
+            ? !gig.clientConfirmPayment && !!gig.musicianConfirmPayment
+            : false,
+        isComplete: !!gig.paymentVerification?.match,
+        myConfirmation: isGigMusician
+          ? gig.musicianConfirmPayment
+          : gig.clientConfirmPayment,
+        otherConfirmation: isGigMusician
+          ? gig.clientConfirmPayment
+          : gig.musicianConfirmPayment,
+        verification: gig.paymentVerification,
+      };
+    });
   },
 });

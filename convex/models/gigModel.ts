@@ -264,15 +264,12 @@ export const gigModel = defineTable({
 
   // === PAYMENT CONFIRMATION SYSTEM (DUAL-CONFIRMATION) ===
 
-  // In your convex/schema.ts or gigs.ts file
-
-  // Update the musicianConfirmPayment object
   musicianConfirmPayment: v.optional(
     v.object({
       gigId: v.id("gigs"),
-      confirmed: v.boolean(), // true = payment received
+      confirmed: v.boolean(),
       confirmedAt: v.number(),
-      screenshot: v.string(), // Storage ID of the screenshot
+      screenshot: v.string(),
       amount: v.number(),
       paymentMethod: v.union(
         v.literal("mpesa"),
@@ -281,11 +278,9 @@ export const gigModel = defineTable({
         v.literal("other"),
       ),
       notes: v.optional(v.string()),
-      // ADD THIS - extracted OCR data
       extractedData: v.optional(
         v.object({
-          // CHANGE THIS LINE - add union with null
-          transactionId: v.optional(v.union(v.string(), v.null())),
+          transactionId: v.optional(v.union(v.string(), v.null())), // string | null | undefined
           amount: v.optional(v.number()),
           date: v.optional(v.string()),
           time: v.optional(v.string()),
@@ -295,17 +290,16 @@ export const gigModel = defineTable({
           fullText: v.optional(v.string()),
           confidence: v.number(),
         }),
-      ),
+      ), // Use shared validator
     }),
   ),
 
-  // Also update the clientConfirmPayment object to match if needed
   clientConfirmPayment: v.optional(
     v.object({
       gigId: v.id("gigs"),
-      confirmed: v.boolean(), // true = payment sent
+      confirmed: v.boolean(),
       confirmedAt: v.number(),
-      screenshot: v.string(), // Storage ID of the screenshot
+      screenshot: v.string(),
       amount: v.number(),
       paymentMethod: v.union(
         v.literal("mpesa"),
@@ -314,11 +308,9 @@ export const gigModel = defineTable({
         v.literal("other"),
       ),
       notes: v.optional(v.string()),
-      // ADD THIS - extracted OCR data
       extractedData: v.optional(
         v.object({
-          // CHANGE THIS LINE to match
-          transactionId: v.optional(v.union(v.string(), v.null())),
+          transactionId: v.optional(v.union(v.string(), v.null())), // string | null | undefined
           amount: v.optional(v.number()),
           date: v.optional(v.string()),
           time: v.optional(v.string()),
@@ -328,7 +320,7 @@ export const gigModel = defineTable({
           fullText: v.optional(v.string()),
           confidence: v.number(),
         }),
-      ),
+      ), // Use shared validator
     }),
   ),
 

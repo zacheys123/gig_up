@@ -1,7 +1,7 @@
 // app/api/ocr/extract/route.ts
+import { ExtractedPaymentData } from "@/utils/paymentTypes";
 import { NextResponse } from "next/server";
 import { createWorker } from "tesseract.js";
-import type { ExtractedPaymentData } from "@/utils/paymentTypes";
 
 // M-Pesa message patterns
 const MPESA_PATTERNS = {
@@ -15,22 +15,28 @@ const MPESA_PATTERNS = {
 
 export async function POST(req: Request) {
   try {
-    const { imageUrl } = await req.json();
+    // Get form data instead of JSON
+    const formData = await req.formData();
+    const file = formData.get("file") as File | null;
 
-    if (!imageUrl) {
+    if (!file) {
       return NextResponse.json(
-        { success: false, error: "No image URL provided" },
+        { success: false, error: "No file provided" },
         { status: 400 },
       );
     }
 
+    // Convert file to buffer for Tesseract
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
     // Initialize worker
     const worker = await createWorker("eng");
 
-    // Recognize text from image
+    // Recognize text from image buffer
     const {
       data: { text, confidence },
-    } = await worker.recognize(imageUrl);
+    } = await worker.recognize(buffer);
 
     // Terminate worker
     await worker.terminate();

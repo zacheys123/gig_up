@@ -8,9 +8,9 @@
  * @module
  */
 
-import type * as adminTypes from "../adminTypes.js";
 import type * as admin_auditlogs from "../admin/auditlogs.js";
 import type * as admin_users from "../admin/users.js";
+import type * as adminTypes from "../adminTypes.js";
 import type * as cloudinary from "../cloudinary.js";
 import type * as controllers_adminFuncs from "../controllers/adminFuncs.js";
 import type * as controllers_bandChat from "../controllers/bandChat.js";
@@ -57,10 +57,12 @@ import type * as models_videoModel from "../models/videoModel.js";
 import type * as musicianmetrics from "../musicianmetrics.js";
 import type * as notHelpers from "../notHelpers.js";
 import type * as notificationsTypes from "../notificationsTypes.js";
+import type * as payment from "../payment.js";
 import type * as presence from "../presence.js";
 import type * as test from "../test.js";
 import type * as trustHelper from "../trustHelper.js";
 import type * as trustScore from "../trustScore.js";
+import type * as upload from "../upload.js";
 import type * as verifyUtil from "../verifyUtil.js";
 
 import type {
@@ -70,9 +72,9 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  adminTypes: typeof adminTypes;
   "admin/auditlogs": typeof admin_auditlogs;
   "admin/users": typeof admin_users;
+  adminTypes: typeof adminTypes;
   cloudinary: typeof cloudinary;
   "controllers/adminFuncs": typeof controllers_adminFuncs;
   "controllers/bandChat": typeof controllers_bandChat;
@@ -119,10 +121,12 @@ declare const fullApi: ApiFromModules<{
   musicianmetrics: typeof musicianmetrics;
   notHelpers: typeof notHelpers;
   notificationsTypes: typeof notificationsTypes;
+  payment: typeof payment;
   presence: typeof presence;
   test: typeof test;
   trustHelper: typeof trustHelper;
   trustScore: typeof trustScore;
+  upload: typeof upload;
   verifyUtil: typeof verifyUtil;
 }>;
 

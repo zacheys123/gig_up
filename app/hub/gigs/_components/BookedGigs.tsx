@@ -1058,7 +1058,7 @@ export const BookedGigs = ({ user }: { user: any }) => {
                       size="sm"
                       variant="ghost"
                       onClick={() =>
-                        (window.location.href = `/gigs/${gig._id}`)
+                        (window.location.href = `/hub/gigs/musician/${gig._id}/gig-info`)
                       }
                       className="h-8 w-8 p-0"
                     >
@@ -1199,7 +1199,9 @@ export const BookedGigs = ({ user }: { user: any }) => {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => (window.location.href = `/gigs/${gig._id}`)}
+                    onClick={() =>
+                      (window.location.href = `/hub/gigs/musician/${gig._id}/gig-info`)
+                    }
                     className={cn(
                       "text-xs",
                       isDarkMode
@@ -1276,7 +1278,9 @@ export const BookedGigs = ({ user }: { user: any }) => {
                         : "from-white to-slate-50/50 hover:from-white",
                       "shadow-sm",
                     )}
-                    onClick={() => (window.location.href = `/gigs/${gig._id}`)}
+                    onClick={() =>
+                      (window.location.href = `/hub/gigs?tab=booked`)
+                    }
                   >
                     <CardContent className="p-3">
                       <div className="flex items-center gap-3">

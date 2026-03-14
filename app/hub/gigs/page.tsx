@@ -87,7 +87,6 @@ const getUserSubtitle = (user: any) => {
     ? `Manage your gigs and opportunities • ${tierDisplay} Plan • Upgrade for premium features`
     : `Manage your gigs and opportunities • ${tierDisplay} Plan`;
 };
-
 const getUserGigTabs = (user: any) => {
   const userTier = user?.tier || "free";
   const isFreeUser = userTier === "free";
@@ -98,16 +97,22 @@ const getUserGigTabs = (user: any) => {
   if (user.isMusician && !user.isClient && !user.isBooker) {
     return {
       tabs: [
-        { id: "pending", label: "⏳ Pending" },
-        { id: "booked", label: "✅ Booked" },
-        { id: "all", label: "🎵 All Gigs" },
-        { id: "favorites", label: "⭐ Favorites" },
-        { id: "saved", label: "💾 Saved" },
-        { id: "reviewed", label: "💾 Reviewed" },
-        { id: "payments", label: "💰 Payments" },
+        { id: "pending", label: "⏳ Pending", icon: "⏳" },
+        { id: "booked", label: "✅ Booked", icon: "✅" },
+        { id: "all", label: "🎵 All Gigs", icon: "🎵" },
+        { id: "favorites", label: "⭐ Favorites", icon: "⭐" },
+        { id: "saved", label: "💾 Saved", icon: "💾" },
+        { id: "reviewed", label: "📝 Reviewed", icon: "📝" },
+        {
+          id: "payments",
+          label: "💰 Payments",
+          icon: "💰",
+          badge: "new",
+        },
         {
           id: "invites",
           label: showLockIcon("gig-invites") ? "🔒 Invites" : "📨 Invites",
+          icon: showLockIcon("gig-invites") ? "🔒" : "📨",
         },
       ],
       defaultTab: "pending",
@@ -118,57 +123,37 @@ const getUserGigTabs = (user: any) => {
   if (user.isClient && !user.isMusician && !user.isBooker) {
     return {
       tabs: [
-        { id: "my-gigs", label: "📋 My Gigs" },
-        { id: "pre-booking", label: "👥 Pre-Booking" },
-        { id: "booked", label: "✅ Booked" },
-        { id: "reviewed", label: "⭐ Reviewed" },
+        { id: "my-gigs", label: "📋 My Gigs", icon: "📋" },
+        { id: "pre-booking", label: "👥 Pre-Booking", icon: "👥" },
+        { id: "booked", label: "✅ Booked", icon: "✅" },
+        { id: "reviewed", label: "⭐ Reviewed", icon: "⭐" },
+        {
+          id: "payments",
+          label: "💰 Payments",
+          icon: "💰",
+          badge: "new",
+        },
         {
           id: "invites",
           label: showLockIcon("gig-invites") ? "🔒 Invites" : "📨 Invites",
+          icon: showLockIcon("gig-invites") ? "🔒" : "📨",
         },
         {
           id: "crew-management",
           label: showLockIcon("crew-management")
-            ? "🔒 Crew Management"
-            : "👥 Crew Management",
+            ? "Crew Management"
+            : " Management",
+          icon: showLockIcon("crew-management") ? "🔒" : "👥",
         },
         {
           id: "create-gigs",
           label: showLockIcon("instant-gigs")
             ? "🔒 Create Gigs"
             : "⚡ Create Gigs",
+          icon: showLockIcon("instant-gigs") ? "🔒" : "⚡",
         },
       ],
       defaultTab: "my-gigs",
-    };
-  }
-
-  // Booker only
-  if (user.isBooker && !user.isMusician && !user.isClient) {
-    return {
-      tabs: [
-        {
-          id: "applications",
-          label: showLockIcon("applications")
-            ? "🔒 Applications"
-            : "⏳ Applications",
-        },
-        {
-          id: "active-projects",
-          label: showLockIcon("active-projects")
-            ? "🔒 Active Projects"
-            : "🚀 Active Projects",
-        },
-        {
-          id: "crew-management",
-          label: showLockIcon("crew-management")
-            ? "🔒 Crew Management"
-            : "👥 Crew Management",
-        },
-        { id: "available-gigs", label: "🎵 Available Gigs" },
-        { id: "payments", label: "💰 Payments" },
-      ],
-      defaultTab: "applications",
     };
   }
 
@@ -216,6 +201,8 @@ const renderGigContent = (
         return <MyGigs user={user} />;
       case "involved":
         return <BookedGigs user={user} />;
+      case "payments":
+        return <PaymentHistory user={user} />; // Add payments for both roles
       case "booker":
         if (requiresUpgrade("applications")) {
           return (
@@ -232,7 +219,7 @@ const renderGigContent = (
     }
   }
 
-  // Musicians
+  // Musicians (already has payments)
   if (user.isMusician) {
     switch (activeTab) {
       case "pending":
@@ -247,7 +234,7 @@ const renderGigContent = (
         return <SavedGigs user={user} />;
       case "reviewed":
         return <ReviewedGigs user={user} />;
-      case "payments":
+      case "payments": // Already exists for musicians
         return <PaymentHistory user={user} />;
       case "invites":
         if (requiresUpgrade("gig-invites")) {
@@ -267,7 +254,7 @@ const renderGigContent = (
     }
   }
 
-  // Clients
+  // Clients (ADDED PAYMENTS TAB)
   if (user.isClient) {
     switch (activeTab) {
       case "my-gigs":
@@ -278,6 +265,8 @@ const renderGigContent = (
         return <BookedGigs user={user} />;
       case "reviewed":
         return <ReviewedGigs user={user} />;
+      case "payments": // NEW: Payments for clients
+        return <PaymentHistory user={user} />;
       case "crew-management":
         if (requiresUpgrade("crew-management")) {
           return (
@@ -318,7 +307,7 @@ const renderGigContent = (
     }
   }
 
-  // Bookers
+  // Bookers (already has payments)
   if (user.isBooker) {
     switch (activeTab) {
       case "applications":
@@ -376,7 +365,6 @@ const renderGigContent = (
 
   return <div>No gig content available</div>;
 };
-
 // ============= LOADING SKELETON =============
 
 const SimpleLoadingSkeleton = () => (
@@ -785,68 +773,221 @@ export default function GigsHub() {
                 </div>
               </div>
             </div>
-            {/* Scrollable tabs - Including Community Nav */}
-            {/* Scrollable tabs - Including Community Nav */}
-            <div className="flex gap-2 overflow-x-auto pb-3 hide-scrollbar scroll-smooth">
-              {/* Community Nav - Distinct but blending */}
-              <Link
-                href="/community?tab=videos"
-                className={cn(
-                  "px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all",
-                  "flex items-center gap-1.5",
-                  "border-2 border-dashed flex-shrink-0",
-                  pathname === "/community" &&
-                    searchParams.get("tab") === "videos"
-                    ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white border-transparent shadow-md"
-                    : cn(
-                        isDarkMode
-                          ? "border-purple-700 text-purple-400 hover:bg-purple-900/20 hover:border-purple-600"
-                          : "border-purple-300 text-purple-700 hover:bg-purple-50 hover:border-purple-400",
-                      ),
-                )}
-              >
-                <Video className="w-4 h-4" />
-                <span>Community</span>
-                <span className="text-[10px] opacity-70 hidden sm:inline">
-                  videos
-                </span>
-              </Link>
 
-              {tabs.map((tab) => {
-                // Check if this tab is active
-                const isActive = activeTab === tab.id;
+            {/* Compact Scrollable Tabs - Modern Design */}
+            {/* Elegant Minimal Tabs with Sophisticated Motion */}
+            <div className="relative">
+              {/* Subtle ambient background */}
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-50/30 to-purple-50/30 dark:from-blue-950/20 dark:to-purple-950/20 rounded-3xl blur-2xl" />
 
-                return (
-                  <motion.button
-                    key={tab.id}
-                    onClick={() => {
-                      handleTabChange(tab.id);
-                      const element = document.getElementById(`tab-${tab.id}`);
-                      if (element) {
-                        element.scrollIntoView({
-                          behavior: "smooth",
-                          block: "nearest",
-                          inline: "center",
-                        });
-                      }
-                    }}
-                    id={`tab-${tab.id}`}
+              {/* Soft edge fades */}
+              <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-white dark:from-slate-900 to-transparent z-10 pointer-events-none" />
+              <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-white dark:from-slate-900 to-transparent z-10 pointer-events-none" />
+
+              {/* Main container with elegant padding */}
+              <div className="flex gap-2 overflow-x-auto pb-4 hide-scrollbar scroll-smooth px-6 py-2">
+                {/* Community Tab - Minimal Elegance */}
+                <motion.div
+                  initial={{ opacity: 0, filter: "blur(10px)" }}
+                  animate={{ opacity: 1, filter: "blur(0px)" }}
+                  transition={{ duration: 0.5 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Link
+                    href="/community?tab=videos"
                     className={cn(
-                      "px-4 py-2 rounded-full text-xs md:text-sm font-medium whitespace-nowrap transition-all relative flex-shrink-0",
-                      // Active tab styling - ALWAYS has blue background with white text
-                      isActive && "bg-blue-500 text-white shadow-md",
-                      // Inactive tab styling
-                      !isActive &&
-                        (isDarkMode
-                          ? "bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white"
-                          : "bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900"),
+                      "group relative px-5 py-2.5 rounded-2xl text-sm font-medium whitespace-nowrap transition-all duration-500",
+                      "flex items-center gap-2.5",
+                      pathname === "/community" &&
+                        searchParams.get("tab") === "videos"
+                        ? "text-white"
+                        : cn(
+                            isDarkMode
+                              ? "text-slate-400 hover:text-white"
+                              : "text-slate-600 hover:text-slate-900",
+                          ),
                     )}
-                    whileTap={{ scale: 0.95 }}
                   >
-                    {tab.label}
-                  </motion.button>
-                );
-              })}
+                    {/* Background layer with smooth transitions */}
+                    <motion.div
+                      className={cn(
+                        "absolute inset-0 rounded-2xl transition-all duration-500",
+                        pathname === "/community" &&
+                          searchParams.get("tab") === "videos"
+                          ? "bg-gradient-to-r from-purple-500 to-pink-500 opacity-100"
+                          : isDarkMode
+                            ? "bg-slate-800/0 group-hover:bg-slate-800/50"
+                            : "bg-slate-100/0 group-hover:bg-slate-100",
+                      )}
+                      layoutId={
+                        pathname === "/community" &&
+                        searchParams.get("tab") === "videos"
+                          ? "activeBackground"
+                          : undefined
+                      }
+                      transition={{
+                        type: "spring",
+                        bounce: 0.2,
+                        duration: 0.6,
+                      }}
+                    />
+
+                    {/* Content */}
+                    <span className="relative z-10">
+                      <Video className="w-4 h-4" />
+                    </span>
+                    <span className="relative z-10">Community</span>
+
+                    {/* Minimal indicator */}
+                    {pathname === "/community" &&
+                      searchParams.get("tab") === "videos" && (
+                        <motion.span
+                          layoutId="activeIndicator"
+                          className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 rounded-full bg-white"
+                          transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 30,
+                          }}
+                        />
+                      )}
+                  </Link>
+                </motion.div>
+
+                {/* Dynamic Tabs */}
+                {tabs.map((tab, index) => {
+                  const isActive = activeTab === tab.id;
+                  const isPaymentTab = tab.id === "payments";
+
+                  return (
+                    <motion.div
+                      key={tab.id}
+                      custom={index}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{
+                        delay: index * 0.1,
+                        type: "spring",
+                        stiffness: 400,
+                        damping: 25,
+                      }}
+                      whileHover={{ y: -2 }}
+                      whileTap={{ scale: 0.97 }}
+                      className="relative"
+                    >
+                      <button
+                        onClick={() => handleTabChange(tab.id)}
+                        className="relative px-5 py-2.5 rounded-2xl text-sm font-medium whitespace-nowrap transition-all duration-300"
+                      >
+                        {/* Animated background */}
+                        <motion.div
+                          className={cn(
+                            "absolute inset-0 rounded-2xl transition-all duration-500",
+                            isActive
+                              ? cn(
+                                  "bg-gradient-to-r",
+                                  isPaymentTab
+                                    ? "from-emerald-400 to-blue-500"
+                                    : "from-blue-400 to-indigo-500",
+                                )
+                              : isDarkMode
+                                ? "bg-slate-800/0 hover:bg-slate-800/40"
+                                : "bg-slate-100/0 hover:bg-slate-100",
+                          )}
+                          animate={
+                            isActive
+                              ? {
+                                  scale: [1, 1.02, 1],
+                                }
+                              : {}
+                          }
+                          transition={{ duration: 2, repeat: Infinity }}
+                          layoutId={isActive ? "activeBackground" : undefined}
+                        />
+
+                        {/* Floating particles for active tab */}
+                        {isActive && (
+                          <>
+                            {[...Array(3)].map((_, i) => (
+                              <motion.div
+                                key={i}
+                                className="absolute w-1 h-1 bg-white/40 rounded-full"
+                                initial={{
+                                  x: Math.random() * 40 - 20,
+                                  y: Math.random() * 40 - 20,
+                                  opacity: 0,
+                                }}
+                                animate={{
+                                  x: Math.random() * 60 - 30,
+                                  y: Math.random() * 60 - 30,
+                                  opacity: [0, 1, 0],
+                                  scale: [0, 1, 0],
+                                }}
+                                transition={{
+                                  duration: 2 + Math.random(),
+                                  repeat: Infinity,
+                                  delay: i * 0.3,
+                                }}
+                              />
+                            ))}
+                          </>
+                        )}
+
+                        {/* Content */}
+                        <div className="relative z-10 flex items-center gap-2.5">
+                          {/* Icon with gentle animation */}
+                          <motion.span
+                            animate={
+                              isActive
+                                ? {
+                                    rotate: [0, 5, -5, 0],
+                                  }
+                                : {}
+                            }
+                            transition={{ duration: 3, repeat: Infinity }}
+                            className={cn(
+                              "text-lg transition-colors duration-300",
+                              isActive
+                                ? "text-white"
+                                : isDarkMode
+                                  ? "text-slate-400"
+                                  : "text-slate-600",
+                            )}
+                          >
+                            {isPaymentTab ? "💰" : "•"}
+                          </motion.span>
+
+                          <span
+                            className={cn(
+                              "transition-colors duration-300",
+                              isActive
+                                ? "text-white font-semibold"
+                                : isDarkMode
+                                  ? "text-slate-400 group-hover:text-white"
+                                  : "text-slate-600 group-hover:text-slate-900",
+                            )}
+                          >
+                            {tab.label}
+                          </span>
+
+                          {/* Elegant badge for payment tab */}
+                          {isPaymentTab && !isActive && (
+                            <motion.span
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              transition={{ type: "spring", delay: 0.5 }}
+                              className="px-1.5 py-0.5 text-[8px] font-medium rounded-full bg-amber-400/20 text-amber-600 dark:text-amber-400 border border-amber-400/30"
+                            >
+                              ●
+                            </motion.span>
+                          )}
+                        </div>
+                      </button>
+                    </motion.div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -867,6 +1008,42 @@ export default function GigsHub() {
         .hide-scrollbar {
           -ms-overflow-style: none;
           scrollbar-width: none;
+        }
+        ,
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+
+        @keyframes float {
+          0%,
+          100% {
+            transform: translateY(0px);
+          }
+          50% {
+            transform: translateY(-5px);
+          }
+        }
+
+        .animate-float {
+          animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+          0%,
+          100% {
+            opacity: 0.5;
+          }
+          50% {
+            opacity: 1;
+          }
+        }
+
+        .animate-pulse-glow {
+          animation: pulse-glow 2s ease-in-out infinite;
         }
       `}</style>
     </div>

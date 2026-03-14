@@ -19,8 +19,8 @@ export function VerificationDashboard({ gig, onVerify }: any) {
         extractMpesaData(gig.musicianPaymentConfirm.screenshot),
         extractMpesaData(gig.clientPaymentConfirm.screenshot),
       ]);
-      setMusicianData(mData);
-      setClientData(cData);
+      setMusicianData(mData ? mData : null);
+      setClientData(cData ? cData : null);
     } finally {
       setExtracting(false);
     }

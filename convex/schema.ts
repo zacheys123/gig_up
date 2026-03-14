@@ -10,6 +10,7 @@ import { videoModel } from "./models/videoModel";
 import { commentsModel } from "./models/commentsModel";
 import { instantGigs, instantGigsTemplate } from "./models/instanGigsModel";
 import { reports } from "./models/reportsModel";
+import { extractedDataValidator } from "./payment";
 const BAND_ACTIVITY_TYPES = [
   "band_created",
   "member_invited",
@@ -467,5 +468,47 @@ export default defineSchema({
       ),
     }),
     updatedAt: v.number(),
-  }).index("by_userId", ["userId"]),
+  }).index("by_userId", ["userId"]), // GigMail model (add this to your schema)
+  gigMail: defineTable({
+    userId: v.id("users"),
+    senderId: v.optional(v.id("users")),
+    gigId: v.optional(v.id("gigs")),
+    subject: v.string(),
+    message: v.string(),
+    type: v.union(
+      v.literal("payment_confirmed"),
+      v.literal("payment_verified"),
+      v.literal("payment_dispute"),
+      v.literal("payment_reminder"),
+      v.literal("gig_completed"),
+      v.literal("system"),
+    ),
+    amount: v.optional(v.number()),
+    transactionId: v.optional(v.string()),
+    paymentMethod: v.optional(v.string()),
+    extractedData: v.optional(
+      v.object({
+        transactionId: v.optional(v.union(v.string(), v.null())), // string | null | undefined
+        amount: v.optional(v.number()),
+        date: v.optional(v.string()),
+        time: v.optional(v.string()),
+        phoneNumber: v.optional(v.string()),
+        sender: v.optional(v.string()),
+        receiver: v.optional(v.string()),
+        fullText: v.optional(v.string()),
+        confidence: v.number(),
+      }),
+    ), // Use shared validator
+    isRead: v.boolean(),
+    isArchived: v.boolean(),
+    requiresAction: v.optional(v.boolean()),
+    actionUrl: v.optional(v.string()),
+    actionLabel: v.optional(v.string()),
+    metadata: v.optional(v.any()),
+    createdAt: v.number(),
+    readAt: v.optional(v.number()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_unread", ["userId", "isRead"])
+    .index("by_gigId", ["gigId"]),
 });

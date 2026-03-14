@@ -1147,7 +1147,11 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
     <TooltipProvider>
       <div className="h-full flex flex-col">
         {/* Sticky Header Section - Fixed at top */}
-        <div className="sticky top-0 z-30 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50">
+        <div
+          className={cn(
+            "sticky top-0 z-30 backdrop-blur-md border-b border-slate-200/50 dark:border-slate-800/50",
+          )}
+        >
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1162,7 +1166,7 @@ export const ClientPreBooking: React.FC<ClientPreBookingProps> = ({ user }) => {
                 transition={{ delay: 0.1 }}
                 className="flex-1 min-w-0"
               >
-                <div className="flex items-center gap-1.5 md:gap-2 mb-0.5">
+                <div className="flex items-center gap-1.5 md:gap-2 mb-0.5 bg-inherit">
                   <div
                     className={cn(
                       "p-1.5 md:p-2 rounded-lg shrink-0",
