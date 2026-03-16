@@ -144,7 +144,7 @@ export default function AboutPage() {
         <div className="absolute top-0 left-0 right-0 h-96 bg-linear-to-b from-amber-500/5 to-transparent" />
 
         {/* Gentle grid pattern */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-20" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#1f2937_1px,transparent_1px),linear-gradient(to_bottom,#1f2937_1px,transparent_1px)] bg-size[4rem_4rem] opacity-20" />
 
         {/* Main content */}
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32">
@@ -168,6 +168,7 @@ export default function AboutPage() {
                   in 2024
                 </span>
               </motion.div>
+
               {/* Main heading */}
               <motion.h1
                 variants={slideUpSpring}
@@ -179,6 +180,7 @@ export default function AboutPage() {
                   Platform: The Story of gigUup
                 </span>
               </motion.h1>
+
               {/* The story */}
               <motion.div variants={slideUpSpring} className="space-y-4 mb-8">
                 <p className="text-lg text-gray-300 leading-relaxed">
@@ -200,17 +202,180 @@ export default function AboutPage() {
                   , and countless unforgettable performances.
                 </p>
               </motion.div>
+
+              {/* CTA Buttons */}
               {/* CTA Buttons */}
               <motion.div
                 variants={slideUpSpring}
-                className="flex flex-col sm:flex-row gap-4 mt-8"
+                className="flex flex-col sm:flex-row gap-4"
               >
-                <button className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors">
-                  Join as an Artist
-                </button>
-                <button className="px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white font-medium rounded-lg transition-colors">
-                  List Your Venue
-                </button>
+                {user ? (
+                  // User is logged in
+                  !user?.firstLogin ? (
+                    // Not first login - check if they have a role
+                    user?.isMusician || user?.isClient || user?.isBooker ? (
+                      // Has a role - go to dashboard
+                      <Link
+                        href="/"
+                        className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-medium overflow-hidden rounded-xl bg-linear-to-r from-amber-500/5 to-amber-400/5 border border-amber-500/20 hover:border-amber-500/40 transition-all duration-500 hover:scale-[1.02] hover:shadow-lg hover:shadow-amber-500/10"
+                      >
+                        {/* Animated gradient background */}
+                        <div className="absolute inset-0 bg-linear-to-r from-amber-500/0 via-amber-500/5 to-amber-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+
+                        {/* Subtle shimmer effect */}
+                        <div className="absolute inset-0 bg-linear-to-r from-transparent via-amber-400/10 to-transparent translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+
+                        {/* Floating dot animation */}
+                        <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400/50 animate-pulse" />
+
+                        <span className="relative flex items-center gap-3">
+                          <svg
+                            className="w-5 h-5 text-amber-400/70 group-hover:text-amber-400 transition-all duration-300 group-hover:rotate-3"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={1.5}
+                              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                            />
+                          </svg>
+                          <span className="text-amber-200/80 group-hover:text-amber-200 transition-colors duration-300 font-medium tracking-wide">
+                            Go to Dashboard
+                          </span>
+                        </span>
+                      </Link>
+                    ) : (
+                      // No role yet - choose role
+                      <Link
+                        href={`/roles/${user?.clerkId}`}
+                        className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-medium overflow-hidden rounded-xl bg-linear-to-r from-amber-500/10 via-amber-400/5 to-amber-500/10 border border-amber-500/30 hover:border-amber-400/50 transition-all duration-500 hover:scale-[1.02] hover:shadow-lg hover:shadow-amber-500/20"
+                      >
+                        {/* Pulsing background */}
+                        <div className="absolute inset-0 bg-linear-to-r from-amber-500/0 via-amber-400/10 to-amber-500/0 animate-pulse-slow opacity-0 group-hover:opacity-100" />
+
+                        {/* Shimmer effect */}
+                        <div className="absolute inset-0 bg-linear-to-r from-transparent via-amber-300/20 to-transparent translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+
+                        {/* Decorative corner accents */}
+                        <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-amber-400/0 group-hover:border-amber-400/30 rounded-tl-xl transition-all duration-500" />
+                        <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-amber-400/0 group-hover:border-amber-400/30 rounded-br-xl transition-all duration-500" />
+
+                        <span className="relative flex items-center gap-3">
+                          <svg
+                            className="w-5 h-5 text-amber-400 group-hover:text-amber-300 transition-all duration-300 group-hover:scale-110"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={1.5}
+                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                            />
+                          </svg>
+                          <span className="text-amber-300 group-hover:text-amber-200 transition-colors duration-300 font-medium tracking-wide">
+                            Pick Your Path: Let's Go!
+                          </span>
+                          <svg
+                            className="w-4 h-4 text-amber-400/70 group-hover:text-amber-300 group-hover:translate-x-1 transition-all duration-300"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M9 5l7 7-7 7"
+                            />
+                          </svg>
+                        </span>
+                      </Link>
+                    )
+                  ) : (
+                    // First login - authenticate
+                    <Link
+                      href="/authenticate"
+                      className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-medium overflow-hidden rounded-xl bg-linear-to-r from-amber-500/5 to-amber-400/5 border border-amber-500/20 hover:border-amber-500/40 transition-all duration-500 hover:scale-[1.02]"
+                    >
+                      <div className="absolute inset-0 bg-linear-to-r from-transparent via-amber-400/10 to-transparent translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+
+                      <span className="relative flex items-center gap-3">
+                        <svg
+                          className="w-5 h-5 text-amber-400/70 group-hover:text-amber-400 transition-colors duration-300"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                          />
+                        </svg>
+                        <span className="text-amber-200/80 group-hover:text-amber-200 transition-colors duration-300">
+                          Get Started
+                        </span>
+                      </span>
+                    </Link>
+                  )
+                ) : (
+                  // User is NOT logged in - show signup buttons
+                  <>
+                    <Link
+                      href="/signup?role=artist"
+                      className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-medium overflow-hidden rounded-xl bg-linear-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 transition-all duration-500 hover:scale-[1.02] hover:shadow-xl hover:shadow-amber-500/30"
+                    >
+                      {/* Shimmer effect */}
+                      <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+
+                      {/* Glow effect */}
+                      <div className="absolute -inset-0.5 bg-linear-to-r from-amber-500 to-amber-400 rounded-xl blur opacity-0 group-hover:opacity-30 transition-opacity duration-500" />
+
+                      <span className="relative flex items-center gap-3 text-gray-900 font-semibold">
+                        <FiMic className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+                        <span>Join as Artist</span>
+                      </span>
+                    </Link>
+
+                    <Link
+                      href="/signup?role=client"
+                      className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-medium overflow-hidden rounded-xl bg-linear-to-r from-indigo-500/10 to-indigo-400/5 border border-indigo-500/20 hover:border-indigo-400/40 transition-all duration-500 hover:scale-[1.02] hover:shadow-lg hover:shadow-indigo-500/10"
+                    >
+                      {/* Shimmer effect */}
+                      <div className="absolute inset-0 bg-linear-to-r from-transparent via-indigo-400/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+
+                      {/* Corner accent */}
+                      <div className="absolute top-0 right-0 w-12 h-12 bg-linear-to-br from-indigo-400/0 to-indigo-400/10 rounded-tr-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                      <span className="relative flex items-center gap-3 text-indigo-200/80 group-hover:text-indigo-200 transition-colors duration-300">
+                        <FiUsers className="w-5 h-5 group-hover:rotate-3 transition-transform duration-300" />
+                        <span>Join as Client</span>
+                      </span>
+                    </Link>
+
+                    <Link
+                      href="/signup?role=booker"
+                      className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-medium overflow-hidden rounded-xl bg-linear-to-r from-purple-500/10 to-purple-400/5 border border-purple-500/20 hover:border-purple-400/40 transition-all duration-500 hover:scale-[1.02] hover:shadow-lg hover:shadow-purple-500/10"
+                    >
+                      {/* Shimmer effect */}
+                      <div className="absolute inset-0 bg-linear-to-r from-transparent via-purple-400/20 to-transparent translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+
+                      {/* Corner accent */}
+                      <div className="absolute bottom-0 left-0 w-12 h-12 bg-linear-to-tr from-purple-400/0 to-purple-400/10 rounded-bl-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                      <span className="relative flex items-center gap-3 text-purple-200/80 group-hover:text-purple-200 transition-colors duration-300">
+                        <FiBriefcase className="w-5 h-5 group-hover:-rotate-3 transition-transform duration-300" />
+                        <span>Join as Booker</span>
+                      </span>
+                    </Link>
+                  </>
+                )}
               </motion.div>
               {/* Founder quote */}
               <motion.div
@@ -218,8 +383,8 @@ export default function AboutPage() {
                 className="mt-12 p-6 rounded-xl bg-gray-800/30 border border-gray-700/50"
               >
                 <p className="text-gray-400 italic">
-                  "Every artist deserves a stage, every venue/client deserves
-                  better. That's what we're building at gigUup."
+                  "Every artist deserves a stage, every venue deserves magic.
+                  That's what we're building at gigUup."
                 </p>
                 <div className="flex items-center gap-3 mt-4">
                   <div className="w-10 h-10 rounded-full bg-linear-to-r from-amber-500 to-purple-500 flex items-center justify-center text-white font-bold">
