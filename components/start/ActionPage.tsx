@@ -1421,7 +1421,11 @@ const ActionPage = () => {
                               <span className="text-red-400">*</span>
                             </label>
                             <textarea
-                              placeholder="Tell us about yourself, your experience, and what makes you unique..."
+                              placeholder={
+                                selectedRole === "client"
+                                  ? "Tell us about your organization..."
+                                  : "Tell us about yourself, your experience, and what makes you unique..."
+                              }
                               value={formData.talentbio}
                               onChange={(e) =>
                                 handleInputChange("talentbio", e.target.value)
