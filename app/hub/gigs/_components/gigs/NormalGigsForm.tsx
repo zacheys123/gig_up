@@ -264,6 +264,7 @@ const DraftsListModal = React.memo(
   }: DraftsListModalProps) => {
     const [searchQuery, setSearchQuery] = useState("");
     const [filterCategory, setFilterCategory] = useState<string>("all");
+    const { colors, isDarkMode, mounted } = useThemeColors();
 
     const filteredDrafts = useMemo(() => {
       return drafts
@@ -302,6 +303,67 @@ const DraftsListModal = React.memo(
           return <Music className="w-4 h-4" />;
         default:
           return <FileText className="w-4 h-4" />;
+      }
+    };
+
+    const getCategoryColors = (category: string) => {
+      switch (category) {
+        case "full":
+          return {
+            primary: colors.musicianPrimary,
+            secondary: colors.musicianSecondary,
+            bg: colors.musicianBg,
+            text: colors.musicianText,
+            border: colors.musicianBorder,
+          };
+        case "personal":
+          return {
+            primary: colors.clientPrimary,
+            secondary: colors.clientSecondary,
+            bg: colors.clientBg,
+            text: colors.clientText,
+            border: colors.clientBorder,
+          };
+        case "other":
+          return {
+            primary: colors.bookerPrimary,
+            secondary: colors.bookerSecondary,
+            bg: colors.bookerBg,
+            text: colors.bookerText,
+            border: colors.bookerBorder,
+          };
+        case "mc":
+          return {
+            primary: colors.mcPrimary,
+            secondary: colors.mcSecondary,
+            bg: colors.mcBg,
+            text: colors.mcText,
+            border: colors.mcBorder,
+          };
+        case "dj":
+          return {
+            primary: colors.djPrimary,
+            secondary: colors.djSecondary,
+            bg: colors.djBg,
+            text: colors.djText,
+            border: colors.djBorder,
+          };
+        case "vocalist":
+          return {
+            primary: colors.vocalistPrimary,
+            secondary: colors.vocalistSecondary,
+            bg: colors.vocalistBg,
+            text: colors.vocalistText,
+            border: colors.vocalistBorder,
+          };
+        default:
+          return {
+            primary: colors.defaultPrimary,
+            secondary: colors.defaultSecondary,
+            bg: colors.defaultBg,
+            text: colors.defaultText,
+            border: colors.defaultBorder,
+          };
       }
     };
 
@@ -350,6 +412,14 @@ const DraftsListModal = React.memo(
       });
     };
 
+    const getProgressColor = (progress: number) => {
+      if (progress >= 75)
+        return `from-[${colors.success}] to-[${colors.success}]80`;
+      if (progress >= 50)
+        return `from-[${colors.clientPrimary}] to-[${colors.clientSecondary}]`;
+      return `from-[${colors.warningText}] to-[${colors.mcPrimary}]`;
+    };
+
     if (!isOpen) return null;
 
     return (
@@ -357,77 +427,136 @@ const DraftsListModal = React.memo(
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{ backgroundColor: colors.overlayDark }}
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col overflow-hidden border border-gray-200 dark:border-gray-800"
+          className={`rounded-2xl shadow-2xl w-full max-w-4xl max-h-[80vh] flex flex-col overflow-hidden border ${colors.card}`}
+          style={{
+            borderColor: colors.borderColor,
+            backgroundColor: colors.background,
+            boxShadow: `0 25px 50px -12px ${colors.shadowDark}`,
+          }}
         >
-          <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
+          {/* Header */}
+          <div
+            className="p-6 border-b"
+            style={{
+              borderColor: colors.borderColor,
+              background: `linear-gradient(to right, ${colors.gradientFrom}10, ${colors.gradientTo}10)`,
+            }}
+          >
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                  <FileText className="w-7 h-7 text-blue-600" />
+                <h2
+                  className={`text-xl font-bold flex items-center gap-3 ${colors.text}`}
+                >
+                  <FileText
+                    className="w-7 h-7"
+                    style={{ color: colors.primary }}
+                  />
                   Your Drafts
                 </h2>
-                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                <p className="mt-1" style={{ color: colors.textMuted }}>
                   {drafts.length} saved draft{drafts.length !== 1 ? "s" : ""}
                   {currentDraftId && " • Current draft is auto-saving"}
                 </p>
               </div>
               <button
                 onClick={onClose}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="p-2 rounded-lg transition-colors"
+                style={{
+                  color: colors.textMuted,
+                  backgroundColor: "transparent",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.backgroundColor = colors.hoverBg)
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.backgroundColor = "transparent")
+                }
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-5 h-5" />
               </button>
             </div>
           </div>
 
-          <div className="p-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+          {/* Search and Filter */}
+          <div
+            className="p-4 border-b"
+            style={{
+              borderColor: colors.borderColor,
+              backgroundColor: colors.backgroundSecondary,
+            }}
+          >
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <Input
+                <Search
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4"
+                  style={{ color: colors.textMuted }}
+                />
+                <input
                   placeholder="Search drafts by title, description, or role..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 rounded-xl border-2 focus:border-blue-500"
+                  className={`w-full pl-10 pr-4 py-2 rounded-xl border-2 focus:outline-none focus:ring-2 ${colors.background}`}
+                  style={{
+                    borderColor: colors.borderColor,
+                    backgroundColor: colors.background,
+                    color: colors.text,
+                  }}
                 />
               </div>
-              <Select
+              <select
                 value={filterCategory}
-                onValueChange={(value) => setFilterCategory(value)}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className={`w-45 rounded-xl border-2 px-3 py-2 focus:outline-none focus:ring-2 ${colors.background}`}
+                style={{
+                  borderColor: colors.borderColor,
+                  backgroundColor: colors.background,
+                  color: colors.text,
+                }}
               >
-                <SelectTrigger className="w-[180px] rounded-xl">
-                  <SelectValue placeholder="Filter by category" />
-                </SelectTrigger>
-                <SelectContent className={"bg-neutral-600"}>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="full">🎵 Full Band</SelectItem>
-                  <SelectItem value="personal">👤 Individual</SelectItem>
-                  <SelectItem value="other">🎭 Create Band</SelectItem>
-                  <SelectItem value="mc">🎤 MC</SelectItem>
-                  <SelectItem value="dj">🎧 DJ</SelectItem>
-                  <SelectItem value="vocalist">🎤 Vocalist</SelectItem>
-                </SelectContent>
-              </Select>
+                <option value="all">All Categories</option>
+                <option value="full">🎵 Full Band</option>
+                <option value="personal">👤 Individual</option>
+                <option value="other">🎭 Create Band</option>
+                <option value="mc">🎤 MC</option>
+                <option value="dj">🎧 DJ</option>
+                <option value="vocalist">🎤 Vocalist</option>
+              </select>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4">
+          {/* Drafts Grid */}
+          <div
+            className="flex-1 overflow-y-auto p-4"
+            style={{ backgroundColor: colors.background }}
+          >
             {filteredDrafts.length === 0 ? (
               <div className="text-center py-12">
-                <div className="mx-auto w-16 h-16 bg-gradient-to-r from-blue-100 to-purple-100 rounded-full flex items-center justify-center mb-4">
-                  <FileText className="w-8 h-8 text-blue-600" />
+                <div
+                  className="mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-4"
+                  style={{
+                    background: `linear-gradient(to right, ${colors.primary}20, ${colors.secondary}20)`,
+                  }}
+                >
+                  <FileText
+                    className="w-8 h-8"
+                    style={{ color: colors.primary }}
+                  />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                <h3
+                  className="text-lg font-semibold mb-2"
+                  style={{ color: colors.text }}
+                >
                   No drafts found
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p style={{ color: colors.textMuted }}>
                   {searchQuery || filterCategory !== "all"
                     ? "Try adjusting your search or filters"
                     : "Start creating a gig to save your first draft!"}
@@ -439,74 +568,86 @@ const DraftsListModal = React.memo(
                   const draftDate = new Date(draft.updatedAt);
                   const timeAgo = getTimeAgo(draftDate);
                   const formattedTime = getFormattedTime(draftDate);
+                  const categoryColors = getCategoryColors(draft.category);
 
                   return (
                     <motion.div
                       key={draft.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className={`group relative bg-gradient-to-br from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 rounded-xl border p-4 hover:shadow-lg transition-all duration-200 ${
-                        draft.id === currentDraftId
-                          ? "border-2 border-blue-500 ring-2 ring-blue-500/20"
-                          : "border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700"
-                      }`}
+                      className="group relative rounded-xl border p-4 hover:shadow-lg transition-all duration-200"
+                      style={{
+                        backgroundColor: colors.card,
+                        borderColor:
+                          draft.id === currentDraftId
+                            ? colors.primary
+                            : colors.borderColor,
+                        boxShadow:
+                          draft.id === currentDraftId
+                            ? `0 0 0 2px ${colors.primary}20`
+                            : "none",
+                        background: `linear-gradient(145deg, ${colors.cardBgStart}, ${colors.cardBgEnd})`,
+                      }}
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
                           <div
-                            className={`p-2 rounded-lg ${
-                              draft.category === "full"
-                                ? "bg-gradient-to-r from-orange-500/10 to-amber-500/10"
-                                : draft.category === "personal"
-                                  ? "bg-gradient-to-r from-blue-500/10 to-cyan-500/10"
-                                  : draft.category === "other"
-                                    ? "bg-gradient-to-r from-purple-500/10 to-pink-500/10"
-                                    : "bg-gradient-to-r from-gray-500/10 to-gray-600/10"
-                            }`}
+                            className="p-2 rounded-lg"
+                            style={{
+                              background: categoryColors.bg,
+                              color: categoryColors.primary,
+                            }}
                           >
                             {getCategoryIcon(draft.category)}
                           </div>
                           <div className="flex flex-col">
-                            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                            <span
+                              className="text-xs font-medium"
+                              style={{ color: colors.textMuted }}
+                            >
                               {getCategoryLabel(draft.category)}
                             </span>
                             {draft.isBandGig && (
-                              <span className="text-xs text-purple-600 dark:text-purple-400">
+                              <span
+                                className="text-xs"
+                                style={{ color: categoryColors.primary }}
+                              >
                                 Band Setup
                               </span>
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-2">
+                          {/* Load Button - Made more prominent */}
                           <button
-                            onClick={() => onLoadDraft(draft.id)}
-                            className="group relative overflow-hidden px-5 py-3 rounded-xl bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 text-white font-semibold text-sm tracking-wide shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
-                            title="Load Draft"
+                            onClick={() => {
+                              console.log("Loading draft:", draft.id);
+                              onLoadDraft(draft.id);
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+                            style={{
+                              backgroundColor: "#4b82f6", // Bright blue
+                              color: "white",
+                              border: "2px solid white",
+                              minWidth: "50px",
+                              justifyContent: "center",
+                            }}
                           >
-                            <div className="absolute inset-0">
-                              {[...Array(3)].map((_, i) => (
-                                <div
-                                  key={i}
-                                  className="absolute w-1 h-1 bg-white/40 rounded-full animate-ping"
-                                  style={{
-                                    top: `${20 + i * 30}%`,
-                                    left: `${10 + i * 40}%`,
-                                    animationDelay: `${i * 0.2}s`,
-                                  }}
-                                />
-                              ))}
-                            </div>
-                            <div className="relative flex items-center justify-center gap-2">
-                              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                              <span>Load Draft</span>
-                            </div>
-                            <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000">
-                              <div className="w-1/2 h-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12" />
-                            </div>
+                            <ArrowRight className="w-4 h-4" />
+                            <span>Load</span>
                           </button>
+
+                          {/* Delete Button */}
                           <button
-                            onClick={() => onDeleteDraft(draft.id)}
-                            className="p-1.5 rounded-md bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-800/50 transition-colors"
+                            onClick={() => {
+                              console.log("Deleting draft:", draft.id);
+                              onDeleteDraft(draft.id);
+                            }}
+                            className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                            style={{
+                              backgroundColor: "#ef4444", // Bright red
+                              color: "white",
+                            }}
                             title="Delete Draft"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -515,18 +656,27 @@ const DraftsListModal = React.memo(
                       </div>
 
                       <div className="space-y-3">
-                        <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                        <h3
+                          className="font-semibold line-clamp-1 group-hover:underline"
+                          style={{ color: colors.text }}
+                        >
                           {draft.title}
                         </h3>
 
                         {draft.data.formValues.description && (
-                          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                          <p
+                            className="text-sm line-clamp-2"
+                            style={{ color: colors.textMuted }}
+                          >
                             {draft.data.formValues.description}
                           </p>
                         )}
 
                         {draft.isBandGig && draft.bandRoleCount && (
-                          <div className="flex items-center gap-2 text-xs text-purple-700 dark:text-purple-300">
+                          <div
+                            className="flex items-center gap-2 text-xs"
+                            style={{ color: categoryColors.primary }}
+                          >
                             <Users className="w-3 h-3" />
                             <span>
                               {draft.bandRoleCount} role
@@ -544,7 +694,10 @@ const DraftsListModal = React.memo(
                           </div>
                         )}
 
-                        <div className="space-y-1 text-xs text-gray-500 dark:text-gray-500">
+                        <div
+                          className="space-y-1 text-xs"
+                          style={{ color: colors.textMuted }}
+                        >
                           {draft.data.formValues.location && (
                             <div className="flex items-center gap-1">
                               <MapPin className="w-3 h-3" />
@@ -568,43 +721,61 @@ const DraftsListModal = React.memo(
 
                         <div className="space-y-1">
                           <div className="flex justify-between text-xs">
-                            <span className="text-gray-600 dark:text-gray-400">
+                            <span style={{ color: colors.textMuted }}>
                               Progress
                             </span>
-                            <span className="font-semibold">
+                            <span
+                              className="font-semibold"
+                              style={{ color: colors.text }}
+                            >
                               {draft.progress}%
                             </span>
                           </div>
-                          <div className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                          <div
+                            className="h-1.5 rounded-full overflow-hidden"
+                            style={{ backgroundColor: colors.skeletonBg }}
+                          >
                             <motion.div
                               initial={{ width: 0 }}
                               animate={{ width: `${draft.progress}%` }}
                               transition={{ duration: 0.5 }}
-                              className={`h-full rounded-full ${
-                                draft.progress >= 75
-                                  ? "bg-gradient-to-r from-green-500 to-emerald-500"
-                                  : draft.progress >= 50
-                                    ? "bg-gradient-to-r from-blue-500 to-cyan-500"
-                                    : "bg-gradient-to-r from-orange-500 to-amber-500"
-                              }`}
+                              className="h-full rounded-full"
+                              style={{
+                                background: `linear-gradient(to right, ${colors.success}, ${colors.success}80)`,
+                                opacity: 0.8,
+                              }}
                             />
                           </div>
                         </div>
                       </div>
 
-                      <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
-                        <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-500">
+                      <div
+                        className="mt-4 pt-3 border-t"
+                        style={{ borderColor: colors.borderLight }}
+                      >
+                        <div className="flex justify-between items-center text-xs">
                           <div className="space-y-1">
-                            <div className="flex items-center gap-1">
+                            <div
+                              className="flex items-center gap-1"
+                              style={{ color: colors.textMuted }}
+                            >
                               <Clock className="w-3 h-3" />
                               <span className="font-medium">{timeAgo}</span>
                             </div>
-                            <div className="text-gray-400 dark:text-gray-600 text-[10px]">
+                            <div
+                              style={{ color: colors.textMuted, opacity: 0.6 }}
+                            >
                               {formattedTime}
                             </div>
                           </div>
                           {draft.id === currentDraftId && (
-                            <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-medium">
+                            <span
+                              className="px-2 py-0.5 rounded-full text-xs font-medium"
+                              style={{
+                                backgroundColor: colors.primary + "20",
+                                color: colors.primary,
+                              }}
+                            >
                               Current
                             </span>
                           )}
@@ -617,10 +788,17 @@ const DraftsListModal = React.memo(
             )}
           </div>
 
-          <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+          {/* Footer */}
+          <div
+            className="p-4 border-t"
+            style={{
+              borderColor: colors.borderColor,
+              backgroundColor: colors.backgroundSecondary,
+            }}
+          >
             <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                <span className="font-medium">
+              <div className="text-sm" style={{ color: colors.textMuted }}>
+                <span className="font-medium" style={{ color: colors.text }}>
                   {filteredDrafts.length} draft
                   {filteredDrafts.length !== 1 ? "s" : ""}
                 </span>
@@ -630,13 +808,23 @@ const DraftsListModal = React.memo(
                   {drafts.filter((d) => d.isBandGig).length !== 1 ? "s" : ""}
                 </span>
               </div>
-              <Button
+              <button
                 onClick={onClose}
-                variant="outline"
-                className="rounded-xl border-2 hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="px-4 py-2 rounded-lg border-2 transition-colors"
+                style={{
+                  borderColor: colors.borderColor,
+                  color: colors.text,
+                  backgroundColor: "transparent",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.backgroundColor = colors.hoverBg)
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.backgroundColor = "transparent")
+                }
               >
                 Close
-              </Button>
+              </button>
             </div>
           </div>
         </motion.div>
@@ -645,7 +833,6 @@ const DraftsListModal = React.memo(
   },
 );
 DraftsListModal.displayName = "DraftsListModal";
-
 // Talent Preview Component
 const TalentPreview = React.memo(({ formValues, colors }: any) => {
   if (
@@ -667,11 +854,11 @@ const TalentPreview = React.memo(({ formValues, colors }: any) => {
         "relative overflow-hidden",
       )}
     >
-      <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-orange-500/10 to-red-500/10 rounded-full -translate-y-12 translate-x-12 blur-2xl" />
+      <div className="absolute top-0 right-0 w-24 h-24 bg-linear-to-br from-orange-500/10 to-red-500/10 rounded-full -translate-y-12 translate-x-12 blur-2xl" />
 
       <div className="flex justify-between items-center mb-4 relative z-10">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500/10 to-red-500/10">
+          <div className="p-2 rounded-lg bg-linear-to-r from-orange-500/10 to-red-500/10">
             <Star className="w-5 h-5 text-orange-500" />
           </div>
           <h3 className={cn("font-semibold", colors.text)}>Talent Details</h3>
@@ -863,11 +1050,11 @@ const BandSetupPreview = React.memo(
           "relative overflow-hidden",
         )}
       >
-        <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-full -translate-y-12 translate-x-12 blur-2xl" />
+        <div className="absolute top-0 right-0 w-24 h-24 bg-linear-to-br from-purple-500/10 to-pink-500/10 rounded-full -translate-y-12 translate-x-12 blur-2xl" />
 
         <div className="flex justify-between items-center mb-4 relative z-10">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500/10 to-pink-500/10">
+            <div className="p-2 rounded-lg bg-linear-to-r from-purple-500/10 to-pink-500/10">
               <Users className="w-5 h-5 text-purple-500" />
             </div>
             <div>
@@ -1008,7 +1195,7 @@ const BandSetupPreview = React.memo(
           </div>
 
           {hasPricedRoles && (
-            <div className="flex items-center justify-between p-2 rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
+            <div className="flex items-center justify-between p-2 rounded-lg bg-linear-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
               <div className="flex items-center gap-2">
                 <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400" />
                 <span className={cn("text-sm font-medium", colors.text)}>
@@ -1039,309 +1226,485 @@ const BandSetupPreview = React.memo(
 );
 BandSetupPreview.displayName = "BandSetupPreview";
 // Interest Window Section Component
-const InterestWindowSection = React.memo(({ formValues, colors }: any) => {
-  const [showInterestWindow, setShowInterestWindow] = useState(false);
-  const [interestWindowType, setInterestWindowType] = useState<
-    "dates" | "days"
-  >("dates");
+// Interest Window Section Component - FIXED VERSION
+const InterestWindowSection = React.memo(
+  ({
+    formValues,
+    colors,
+    onFieldChange, // Add this prop to handle changes
+  }: any) => {
+    const [showInterestWindow, setShowInterestWindow] = useState(false);
+    const [interestWindowType, setInterestWindowType] = useState<
+      "dates" | "days"
+    >(
+      formValues.acceptInterestStartTime || formValues.acceptInterestEndTime
+        ? "dates"
+        : "days",
+    );
 
-  const handleInterestWindowChange = useCallback(
-    (field: string, value: any) => {
-      // This would be handled by parent component
-    },
-    [],
-  );
+    const handleInterestWindowChange = useCallback(
+      (field: string, value: any) => {
+        if (onFieldChange) {
+          onFieldChange(field, value);
+        }
+      },
+      [onFieldChange],
+    );
 
-  if (!showInterestWindow) {
+    // Format datetime for input
+    const formatDateForInput = (dateString: string) => {
+      if (!dateString) return "";
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "";
+
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+
+    // Parse datetime from input
+    const parseDateTime = (datetimeString: string) => {
+      if (!datetimeString) return null;
+      const date = new Date(datetimeString);
+      return date.toISOString();
+    };
+
+    if (!showInterestWindow) {
+      return (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className={cn(
+            "rounded-xl p-6 border cursor-pointer transition-all group",
+            colors.border,
+            colors.backgroundMuted,
+            "hover:shadow-lg hover:border-purple-500/50",
+          )}
+          onClick={() => setShowInterestWindow(true)}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div
+                className={cn(
+                  "p-3 rounded-lg transition-transform group-hover:scale-110",
+                  "bg-linear-to-r from-purple-500/10 to-pink-500/10",
+                )}
+              >
+                <Clock className="w-5 h-5 text-purple-500" />
+              </div>
+              <div>
+                <h3 className={cn("font-semibold", colors.text)}>
+                  Set Interest Window (Optional)
+                </h3>
+                <p className={cn("text-sm", colors.textMuted)}>
+                  Control when musicians can show interest in your gig
+                </p>
+              </div>
+            </div>
+            <ChevronRight className={cn("w-5 h-5", colors.textMuted)} />
+          </div>
+        </motion.div>
+      );
+    }
+
     return (
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        initial={{ opacity: 0, height: 0 }}
+        animate={{ opacity: 1, height: "auto" }}
+        exit={{ opacity: 0, height: 0 }}
         className={cn(
-          "rounded-xl p-6 border cursor-pointer transition-all group",
+          "rounded-xl border overflow-hidden",
           colors.border,
           colors.backgroundMuted,
-          "hover:shadow-lg hover:border-purple-500/50",
         )}
-        onClick={() => setShowInterestWindow(true)}
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div
-              className={cn(
-                "p-3 rounded-lg transition-transform group-hover:scale-110",
-                "bg-gradient-to-r from-purple-500/10 to-pink-500/10",
-              )}
-            >
-              <Clock className="w-5 h-5 text-purple-500" />
-            </div>
-            <div>
-              <h3 className={cn("font-semibold", colors.text)}>
-                Set Interest Window (Optional)
-              </h3>
-              <p className={cn("text-sm", colors.textMuted)}>
-                Control when musicians can show interest in your gig
-              </p>
-            </div>
-          </div>
-          <ChevronRight className={cn("w-5 h-5", colors.textMuted)} />
-        </div>
-      </motion.div>
-    );
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, height: 0 }}
-      animate={{ opacity: 1, height: "auto" }}
-      className={cn(
-        "rounded-xl border overflow-hidden",
-        colors.border,
-        colors.backgroundMuted,
-      )}
-    >
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-r from-purple-500/10 to-pink-500/10">
-              <Clock className="w-5 h-5 text-purple-500" />
-            </div>
-            <div>
-              <h3 className={cn("font-semibold", colors.text)}>
-                Interest Window Settings
-              </h3>
-              <p className={cn("text-sm", colors.textMuted)}>
-                When can musicians show interest in this gig?
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => setShowInterestWindow(false)}
-            className={cn(
-              "p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800",
-              colors.textMuted,
-            )}
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="mb-6">
-          <label className={cn("block text-sm font-medium mb-3", colors.text)}>
-            Interest Window Type
-          </label>
-          <div className="flex gap-3">
-            <Button
-              type="button"
-              variant={interestWindowType === "dates" ? "default" : "outline"}
-              onClick={() => setInterestWindowType("dates")}
-              className={cn(
-                "flex-1",
-                interestWindowType === "dates" &&
-                  "bg-gradient-to-r from-purple-500 to-pink-500 text-white",
-              )}
-            >
-              Specific Dates
-            </Button>
-            <Button
-              type="button"
-              variant={interestWindowType === "days" ? "default" : "outline"}
-              onClick={() => setInterestWindowType("days")}
-              className={cn(
-                "flex-1",
-                interestWindowType === "days" &&
-                  "bg-gradient-to-r from-blue-500 to-cyan-500 text-white",
-              )}
-            >
-              Days After Posting
-            </Button>
-          </div>
-        </div>
-
-        {interestWindowType === "dates" && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label
-                  className={cn("block text-sm font-medium mb-2", colors.text)}
-                >
-                  Interest Opens
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    type="datetime-local"
-                    value={formValues.acceptInterestStartTime || ""}
-                    onChange={(e) =>
-                      handleInterestWindowChange(
-                        "acceptInterestStartTime",
-                        e.target.value,
-                      )
-                    }
-                    className="pl-10"
-                  />
-                </div>
-                <p className={cn("text-xs mt-1", colors.textMuted)}>
-                  When musicians can start showing interest
-                </p>
+        <div className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-linear-to-r from-purple-500/10 to-pink-500/10">
+                <Clock className="w-5 h-5 text-purple-500" />
               </div>
-
               <div>
-                <label
-                  className={cn("block text-sm font-medium mb-2", colors.text)}
-                >
-                  Interest Closes
-                </label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    type="datetime-local"
-                    value={formValues.acceptInterestEndTime || ""}
-                    onChange={(e) =>
-                      handleInterestWindowChange(
-                        "acceptInterestEndTime",
-                        e.target.value,
-                      )
-                    }
-                    className="pl-10"
-                  />
-                </div>
-                <p className={cn("text-xs mt-1", colors.textMuted)}>
-                  When interest period ends
+                <h3 className={cn("font-semibold", colors.text)}>
+                  Interest Window Settings
+                </h3>
+                <p className={cn("text-sm", colors.textMuted)}>
+                  When can musicians show interest in this gig?
                 </p>
               </div>
             </div>
+            <button
+              onClick={() => setShowInterestWindow(false)}
+              className={cn(
+                "p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800",
+                colors.textMuted,
+              )}
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
-        )}
 
-        {interestWindowType === "days" && (
-          <div>
+          <div className="mb-6">
             <label
               className={cn("block text-sm font-medium mb-3", colors.text)}
             >
-              Interest Window Duration
+              Interest Window Type
             </label>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const current = formValues.interestWindowDays || 7;
-                    handleInterestWindowChange(
-                      "interestWindowDays",
-                      Math.max(1, current - 1),
-                    );
-                  }}
-                  className="h-10 w-10"
-                >
-                  -
-                </Button>
-                <div className="relative">
-                  <Input
-                    type="number"
-                    value={formValues.interestWindowDays || 7}
-                    onChange={(e) =>
-                      handleInterestWindowChange(
-                        "interestWindowDays",
-                        parseInt(e.target.value) || 7,
-                      )
-                    }
-                    min="1"
-                    max="90"
-                    className="w-20 text-center"
-                  />
-                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
-                    days
-                  </span>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    const current = formValues.interestWindowDays || 7;
-                    handleInterestWindowChange(
-                      "interestWindowDays",
-                      current + 1,
-                    );
-                  }}
-                  className="h-10 w-10"
-                >
-                  +
-                </Button>
-              </div>
-
-              <div className="flex-1">
-                <p className={cn("text-sm", colors.textMuted)}>
-                  Musicians can show interest for{" "}
-                  <span className="font-semibold">
-                    {formValues.interestWindowDays || 7} days
-                  </span>{" "}
-                  after posting
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2 mt-3">
-              {[1, 3, 7, 14, 30].map((days) => (
-                <Button
-                  key={days}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    handleInterestWindowChange("interestWindowDays", days)
-                  }
-                  className={cn(
-                    formValues.interestWindowDays === days &&
-                      "bg-gradient-to-r from-blue-500 to-cyan-500 text-white",
-                  )}
-                >
-                  {days} {days === 1 ? "day" : "days"}
-                </Button>
-              ))}
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant={interestWindowType === "dates" ? "default" : "outline"}
+                onClick={() => {
+                  setInterestWindowType("dates");
+                  // Clear days-based settings when switching
+                  handleInterestWindowChange("interestWindowDays", null);
+                  handleInterestWindowChange("enableInterestWindow", true);
+                }}
+                className={cn(
+                  "flex-1",
+                  interestWindowType === "dates" &&
+                    "bg-linear-to-r from-purple-500 to-pink-500 text-white",
+                )}
+              >
+                Specific Dates
+              </Button>
+              <Button
+                type="button"
+                variant={interestWindowType === "days" ? "default" : "outline"}
+                onClick={() => {
+                  setInterestWindowType("days");
+                  // Clear date-based settings when switching
+                  handleInterestWindowChange("acceptInterestStartTime", null);
+                  handleInterestWindowChange("acceptInterestEndTime", null);
+                  handleInterestWindowChange("enableInterestWindow", true);
+                }}
+                className={cn(
+                  "flex-1",
+                  interestWindowType === "days" &&
+                    "bg-linear-to-r from-blue-500 to-cyan-500 text-white",
+                )}
+              >
+                Days After Posting
+              </Button>
             </div>
           </div>
-        )}
 
-        {(formValues.acceptInterestStartTime ||
-          formValues.acceptInterestEndTime ||
-          formValues.interestWindowDays) && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-6 pt-4 border-t"
-          >
-            <div className="flex items-center gap-3">
-              <Info className="w-5 h-5 text-blue-500" />
-              <div>
-                <p className="text-sm font-medium">
-                  Interest Window Configured
-                </p>
-                <p className="text-xs text-gray-500">
-                  {interestWindowType === "dates"
-                    ? `Interest opens: ${formValues.acceptInterestStartTime ? new Date(formValues.acceptInterestStartTime).toLocaleString() : "Not set"}`
-                    : `Interest open for ${formValues.interestWindowDays || 7} days after posting`}
-                </p>
+          {interestWindowType === "dates" && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label
+                    className={cn(
+                      "block text-sm font-medium mb-2",
+                      colors.text,
+                    )}
+                  >
+                    Interest Opens
+                  </label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      type="datetime-local"
+                      value={formatDateForInput(
+                        formValues.acceptInterestStartTime,
+                      )}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value) {
+                          const isoString = parseDateTime(value);
+                          handleInterestWindowChange(
+                            "acceptInterestStartTime",
+                            isoString,
+                          );
+                        } else {
+                          handleInterestWindowChange(
+                            "acceptInterestStartTime",
+                            null,
+                          );
+                        }
+                      }}
+                      className="pl-10"
+                      min={new Date().toISOString().slice(0, 16)} // Can't select past dates
+                    />
+                  </div>
+                  <p className={cn("text-xs mt-1", colors.textMuted)}>
+                    When musicians can start showing interest
+                  </p>
+                </div>
+
+                <div>
+                  <label
+                    className={cn(
+                      "block text-sm font-medium mb-2",
+                      colors.text,
+                    )}
+                  >
+                    Interest Closes
+                  </label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      type="datetime-local"
+                      value={formatDateForInput(
+                        formValues.acceptInterestEndTime,
+                      )}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value) {
+                          const isoString = parseDateTime(value);
+                          // Ensure end date is after start date
+                          if (formValues.acceptInterestStartTime) {
+                            const startDate = new Date(
+                              formValues.acceptInterestStartTime,
+                            );
+                            const endDate = new Date(isoString!);
+                            if (endDate > startDate) {
+                              handleInterestWindowChange(
+                                "acceptInterestEndTime",
+                                isoString,
+                              );
+                            } else {
+                              toast.error("End date must be after start date");
+                            }
+                          } else {
+                            handleInterestWindowChange(
+                              "acceptInterestEndTime",
+                              isoString,
+                            );
+                          }
+                        } else {
+                          handleInterestWindowChange(
+                            "acceptInterestEndTime",
+                            null,
+                          );
+                        }
+                      }}
+                      className="pl-10"
+                      min={
+                        formValues.acceptInterestStartTime
+                          ? new Date(formValues.acceptInterestStartTime)
+                              .toISOString()
+                              .slice(0, 16)
+                          : new Date().toISOString().slice(0, 16)
+                      }
+                    />
+                  </div>
+                  <p className={cn("text-xs mt-1", colors.textMuted)}>
+                    When interest period ends
+                  </p>
+                </div>
+              </div>
+
+              {/* Date Validation Message */}
+              {formValues.acceptInterestStartTime &&
+                formValues.acceptInterestEndTime && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className={cn(
+                      "p-3 rounded-lg",
+                      "bg-green-5 ",
+                      colors.successBg,
+                      "border border-green-200 dark:border-green-800",
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span
+                        className={cn(
+                          "text-xs text-green-70",
+                          colors.textMuted,
+                        )}
+                      >
+                        Interest window:{" "}
+                        {new Date(
+                          formValues.acceptInterestStartTime,
+                        ).toLocaleString()}{" "}
+                        -{" "}
+                        {new Date(
+                          formValues.acceptInterestEndTime,
+                        ).toLocaleString()}
+                      </span>
+                    </div>
+                  </motion.div>
+                )}
+            </div>
+          )}
+
+          {interestWindowType === "days" && (
+            <div>
+              <label
+                className={cn("block text-sm font-medium mb-3", colors.text)}
+              >
+                Interest Window Duration
+              </label>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const current = formValues.interestWindowDays || 7;
+                      handleInterestWindowChange(
+                        "interestWindowDays",
+                        Math.max(1, current - 1),
+                      );
+                    }}
+                    className="h-10 w-10"
+                  >
+                    -
+                  </Button>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      value={formValues.interestWindowDays || 7}
+                      onChange={(e) =>
+                        handleInterestWindowChange(
+                          "interestWindowDays",
+                          parseInt(e.target.value) || 7,
+                        )
+                      }
+                      min="1"
+                      max="90"
+                      className="w-20 text-center"
+                    />
+                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
+                      days
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const current = formValues.interestWindowDays || 7;
+                      handleInterestWindowChange(
+                        "interestWindowDays",
+                        current + 1,
+                      );
+                    }}
+                    className="h-10 w-10"
+                  >
+                    +
+                  </Button>
+                </div>
+
+                <div className="flex-1">
+                  <p className={cn("text-sm", colors.textMuted)}>
+                    Musicians can show interest for{" "}
+                    <span className="font-semibold">
+                      {formValues.interestWindowDays || 7} days
+                    </span>{" "}
+                    after posting
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2 mt-3">
+                {[1, 3, 7, 14, 30].map((days) => (
+                  <Button
+                    key={days}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      handleInterestWindowChange("interestWindowDays", days)
+                    }
+                    className={cn(
+                      formValues.interestWindowDays === days &&
+                        "bg-linear-to-r from-blue-500 to-cyan-500 text-white",
+                    )}
+                  >
+                    {days} {days === 1 ? "day" : "days"}
+                  </Button>
+                ))}
               </div>
             </div>
-          </motion.div>
-        )}
+          )}
 
-        <div className="mt-4 pt-4 border-t">
-          <p className={cn("text-xs", colors.textMuted)}>
-            <strong>Tip:</strong> Setting an interest window helps manage
-            application flow and prevents last-minute applications.
-          </p>
+          {(formValues.acceptInterestStartTime ||
+            formValues.acceptInterestEndTime ||
+            formValues.interestWindowDays) && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6 pt-4 border-t"
+            >
+              <div className="flex items-center gap-3">
+                <Info className="w-5 h-5 text-blue-500" />
+                <div>
+                  <p className="text-sm font-medium">
+                    Interest Window Configured
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {interestWindowType === "dates"
+                      ? `Opens: ${formValues.acceptInterestStartTime ? new Date(formValues.acceptInterestStartTime).toLocaleString() : "Not set"} • Closes: ${formValues.acceptInterestEndTime ? new Date(formValues.acceptInterestEndTime).toLocaleString() : "Not set"}`
+                      : `Open for ${formValues.interestWindowDays || 7} days after posting`}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Quick Presets */}
+          {interestWindowType === "dates" && (
+            <div className="mt-6">
+              <label
+                className={cn("block text-sm font-medium mb-3", colors.text)}
+              >
+                Quick Presets
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { label: "1 Week", days: 7 },
+                  { label: "2 Weeks", days: 14 },
+                  { label: "1 Month", days: 30 },
+                ].map((preset) => (
+                  <Button
+                    key={preset.label}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const startDate = new Date();
+                      const endDate = new Date();
+                      endDate.setDate(endDate.getDate() + preset.days);
+
+                      handleInterestWindowChange(
+                        "acceptInterestStartTime",
+                        startDate.toISOString(),
+                      );
+                      handleInterestWindowChange(
+                        "acceptInterestEndTime",
+                        endDate.toISOString(),
+                      );
+                    }}
+                  >
+                    {preset.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-4 pt-4 border-t">
+            <p className={cn("text-xs", colors.textMuted)}>
+              <strong>Tip:</strong> Setting an interest window helps manage
+              application flow and prevents last-minute applications. You can
+              always extend the window later if needed.
+            </p>
+          </div>
         </div>
-      </div>
-    </motion.div>
-  );
-});
+      </motion.div>
+    );
+  },
+);
 InterestWindowSection.displayName = "InterestWindowSection";
-
 // Validation Summary Component
 const ValidationSummary = React.memo(({ fieldErrors }: any) => {
   if (Object.keys(fieldErrors).length === 0) return null;
@@ -3747,9 +4110,17 @@ export default function NormalGigsForm() {
                     )}
 
                     {/* Interest Window Section */}
+                    {/* In the Security TabsContent section, update the InterestWindowSection */}
                     <InterestWindowSection
                       formValues={formValues}
                       colors={colors}
+                      onFieldChange={(field: string, value: any) => {
+                        setFormValues((prev: LocalGigInputs) => ({
+                          ...prev,
+                          [field]: value,
+                          enableInterestWindow: true, // Enable interest window when any value is set
+                        }));
+                      }}
                     />
                   </div>
                 </CardContent>

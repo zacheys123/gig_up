@@ -112,6 +112,37 @@ export const verifySecurityAnswerAndReset = mutation({
   },
 });
 
+// Add this to your convex/controllers/verifyGig.ts
+
+export const verifySecAnswer = mutation({
+  args: {
+    clerkId: v.string(),
+    answer: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (!user.securityQuestion || !user.securityAnswer) {
+      throw new Error("No security question set for this account");
+    }
+
+    // Verify the answer
+    const isCorrect = verifySecurityAnswer(
+      args.answer,
+      user.securityAnswer
+    );
+
+    return isCorrect;
+  },
+});
+
 export const verifyGigSecret = mutation({
   args: {
     gigId: v.id("gigs"),
@@ -125,3 +156,5 @@ export const verifyGigSecret = mutation({
     return gig.secret === args.secretKey;
   },
 });
+
+
