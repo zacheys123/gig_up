@@ -1,5 +1,5 @@
 // app/hub/gigs/_components/PaymentHistory.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -36,6 +36,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface PaymentHistoryProps {
   user: any;
