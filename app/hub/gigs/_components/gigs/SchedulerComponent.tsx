@@ -468,7 +468,7 @@ const TrustScoreOverlay = ({
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => window.open("/profile/edit", "_blank")}
+              onClick={() => window.open("/profile", "_blank")}
               className="px-4 py-2 text-xs rounded-lg font-medium bg-linear-to-r from-amber-600 to-orange-600 text-white"
             >
               Improve Score
@@ -1731,13 +1731,26 @@ const SchedulerComponent = ({
                         isInGracePeriod={isInGracePeriod}
                       />
                     )}
-
                     <div className="flex justify-end pt-4">
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => setCurrentStep("selection")}
-                        className="px-6 py-3 bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-lg text-sm font-medium flex items-center gap-2 hover:from-blue-700 hover:to-blue-800 transition-all"
+                        className={cn(
+                          "px-6 py-3 bg-linear-to-r from-blue-600 to-blue-700 text-white rounded-lg text-sm font-medium flex items-center gap-2 hover:from-blue-700 hover:to-blue-800 transition-all",
+                          !(
+                            isProfileComplete &&
+                            trustScore >= 10 &&
+                            canCreateMoreGigs
+                          ) && "opacity-50 cursor-not-allowed",
+                        )}
+                        disabled={
+                          !(
+                            isProfileComplete &&
+                            trustScore >= 10 &&
+                            canCreateMoreGigs
+                          )
+                        }
                       >
                         Continue to Options
                         <ArrowRight className="w-4 h-4" />
