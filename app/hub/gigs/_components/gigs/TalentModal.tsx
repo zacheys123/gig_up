@@ -259,11 +259,50 @@ const TalentModal = ({
     setLocalErrors((prev) => ({ ...prev, [field]: error }));
   };
 
-  // Fix 2: Create helper functions for type-safe array operations
+  // Fix the handleVocalistGenreChange function
+  const handleVocalistGenreChange = (genre: string) => {
+    // Don't skip "Other" - handle it like any other genre
+    const currentGenres = getStringArray(localData.vocalistGenre);
+
+    // Make sure currentGenres is an array
+    const genresArray = Array.isArray(currentGenres) ? currentGenres : [];
+
+    const updatedGenres = genresArray.includes(genre)
+      ? genresArray.filter((g: string) => g !== genre)
+      : [...genresArray, genre];
+
+    handleFieldChange("vocalistGenre", updatedGenres);
+  };
+
+  // Fix the addCustomItem function
+  const addCustomItem = (field: keyof LocalGigInputs) => {
+    if (!customInput.trim()) return;
+
+    // Get current items safely
+    const currentValue = localData[field];
+    let currentItems: string[] = [];
+
+    if (Array.isArray(currentValue)) {
+      currentItems = currentValue;
+    } else if (typeof currentValue === "string") {
+      currentItems = currentValue
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+
+    if (!currentItems.includes(customInput.trim())) {
+      const updatedItems = [...currentItems, customInput.trim()];
+      handleFieldChange(field, updatedItems);
+      setCustomInput("");
+    }
+  };
+
+  // Fix the getStringArray function to always return an array
   const getStringArray = (value: any): string[] => {
     if (!value) return [];
     if (Array.isArray(value)) {
-      return value.map((item) => String(item));
+      return value;
     }
     if (typeof value === "string") {
       return value
@@ -273,7 +312,6 @@ const TalentModal = ({
     }
     return [];
   };
-
   const updateStringArray = (
     currentValue: any,
     item: string,
@@ -288,18 +326,6 @@ const TalentModal = ({
     } else {
       return currentArray.filter((i) => i !== item);
     }
-  };
-
-  // Fix 3: Update all the handler functions
-  const handleVocalistGenreChange = (genre: string) => {
-    if (genre === "Other") return;
-
-    const currentGenres = getStringArray(localData.vocalistGenre);
-    const updatedGenres = currentGenres.includes(genre)
-      ? currentGenres.filter((g: string) => g !== genre)
-      : [...currentGenres, genre];
-
-    handleFieldChange("vocalistGenre", updatedGenres);
   };
 
   const handleMcLanguageChange = (language: string) => {
@@ -335,20 +361,6 @@ const TalentModal = ({
     handleFieldChange("djEquipment", updatedEquipment);
   };
 
-  // Fix 4: Update addCustomItem function
-  const addCustomItem = (field: keyof LocalGigInputs) => {
-    if (!customInput.trim()) return;
-
-    const currentItems = getStringArray(localData[field]);
-
-    if (!currentItems.includes(customInput.trim())) {
-      const updatedItems = [...currentItems, customInput.trim()];
-      handleFieldChange(field, updatedItems);
-      setCustomInput("");
-    }
-  };
-
-  // Fix 5: Update removeItem function
   const removeItem = (field: keyof LocalGigInputs, item: string) => {
     const currentItems = getStringArray(localData[field]);
     const updatedItems = currentItems.filter((i) => i !== item);

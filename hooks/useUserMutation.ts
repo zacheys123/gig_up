@@ -100,7 +100,7 @@ export function useUserMutations() {
     skills?: string[]; // Make skills optional
   }) => {
     if (!userId) throw new Error("No user ID available");
-    const validClientType = clientData.clientType.includes("_client") ? clientData.clientType : `${clientData.clientType}_client` as ClientType; // Add "_client" suffix
+    const validClientType = clientData.clientType as ClientType; // Add "_client" suffix
 
     const updates = {
       isMusician: false,
