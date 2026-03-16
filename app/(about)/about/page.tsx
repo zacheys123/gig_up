@@ -168,7 +168,6 @@ export default function AboutPage() {
                   in 2024
                 </span>
               </motion.div>
-
               {/* Main heading */}
               <motion.h1
                 variants={slideUpSpring}
@@ -180,7 +179,6 @@ export default function AboutPage() {
                   Platform: The Story of gigUup
                 </span>
               </motion.h1>
-
               {/* The story */}
               <motion.div variants={slideUpSpring} className="space-y-4 mb-8">
                 <p className="text-lg text-gray-300 leading-relaxed">
@@ -202,83 +200,26 @@ export default function AboutPage() {
                   , and countless unforgettable performances.
                 </p>
               </motion.div>
-
               {/* CTA Buttons */}
               <motion.div
                 variants={slideUpSpring}
-                className="flex flex-col sm:flex-row gap-4"
+                className="flex flex-col sm:flex-row gap-4 mt-8"
               >
-                {user ? (
-                  <Link
-                    href={
-                      !user?.firstLogin
-                        ? user?.isMusician || user?.isClient || user?.isBooker
-                          ? "/"
-                          : `/roles/${user?.clerkId}`
-                        : "/authenticate"
-                    }
-                    className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-medium text-amber-300 bg-gray-800/60 rounded-xl border border-gray-700 hover:bg-gray-800 hover:border-amber-500/40 transition-all duration-300"
-                  >
-                    <span className="flex items-center gap-3">
-                      <span>Go to Dashboard</span>
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={1.5}
-                          d="M13 7l5 5m0 0l-5 5m5-5H6"
-                        />
-                      </svg>
-                    </span>
-                  </Link>
-                ) : (
-                  <>
-                    <Link
-                      href="/signup?role=artist"
-                      className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-medium text-white bg-linear-to-r from-amber-600 to-amber-500 rounded-xl hover:from-amber-500 hover:to-amber-400 transition-all duration-300 shadow-lg shadow-amber-500/20"
-                    >
-                      <span className="flex items-center gap-3">
-                        <FiMic className="w-5 h-5" />
-                        <span>Join as Artist</span>
-                      </span>
-                    </Link>
-
-                    <Link
-                      href="/signup?role=client"
-                      className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-medium text-gray-300 bg-gray-800/60 rounded-xl border border-gray-700 hover:bg-gray-800 hover:border-gray-600 transition-all duration-300"
-                    >
-                      <span className="flex items-center gap-3">
-                        <FiUsers className="w-5 h-5" />
-                        <span>Join as Client</span>
-                      </span>
-                    </Link>
-
-                    <Link
-                      href="/signup?role=booker"
-                      className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-medium text-purple-300 bg-gray-800/60 rounded-xl border border-purple-500/20 hover:bg-gray-800 hover:border-purple-500/30 transition-all duration-300"
-                    >
-                      <span className="flex items-center gap-3">
-                        <FiBriefcase className="w-5 h-5" />
-                        <span>Join as Booker</span>
-                      </span>
-                    </Link>
-                  </>
-                )}
+                <button className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors">
+                  Join as an Artist
+                </button>
+                <button className="px-6 py-3 bg-purple-500 hover:bg-purple-600 text-white font-medium rounded-lg transition-colors">
+                  List Your Venue
+                </button>
               </motion.div>
-
               {/* Founder quote */}
               <motion.div
                 variants={slideUpSpring}
                 className="mt-12 p-6 rounded-xl bg-gray-800/30 border border-gray-700/50"
               >
                 <p className="text-gray-400 italic">
-                  "Every artist deserves a stage, every venue deserves magic.
-                  That's what we're building at gigUup."
+                  "Every artist deserves a stage, every venue/client deserves
+                  better. That's what we're building at gigUup."
                 </p>
                 <div className="flex items-center gap-3 mt-4">
                   <div className="w-10 h-10 rounded-full bg-linear-to-r from-amber-500 to-purple-500 flex items-center justify-center text-white font-bold">
