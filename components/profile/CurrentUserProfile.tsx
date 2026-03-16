@@ -1925,42 +1925,43 @@ const CurrentUserProfile = () => {
                 </button>
               </div>
             </SectionContainer>
-            <SectionContainer
-              title="Band Preferences"
-              icon={<Book size={18} />}
-              className={"pt-6 pb-[52px]"}
-            >
-              {user && (
-                <>
-                  <ToggleSwitch
-                    label="Open to Band Work"
-                    description="Receive notifications for band formation gigs"
-                    checked={user.openToBandWork || false}
-                    onChange={(checked) => {
-                      updateUser({
-                        userId: user._id as Id<"users">,
-                        clerkId: user.clerkId,
-                        updates: { openToBandWork: checked },
-                      });
-                    }}
-                  />
-                  <ToggleSwitch
-                    label="Interested in Joining Bands"
-                    description="Get notified about new band opportunities"
-                    checked={user.interestedInBands || false}
-                    onChange={(checked) => {
-                      updateUser({
-                        userId: user._id as Id<"users">,
-                        clerkId: user.clerkId,
-                        updates: { interestedInBands: checked },
-                      });
-                    }}
-                  />
-                </>
-              )}
-            </SectionContainer>
-
-            {/* Account Type */}
+            {user?.roleType === "instrumentalist" ||
+              user?.roleType === "dj" ||
+              user?.roleType === "mc" ||
+              (user?.roleType === "vocalist" && (
+                <SectionContainer
+                  title="Band Preferences"
+                  icon={<Book size={18} />}
+                  className={"pt-6 pb-13"}
+                >
+                  <>
+                    <ToggleSwitch
+                      label="Open to Band Work"
+                      description="Receive notifications for band formation gigs"
+                      checked={user.openToBandWork || false}
+                      onChange={(checked) => {
+                        updateUser({
+                          userId: user._id as Id<"users">,
+                          clerkId: user.clerkId,
+                          updates: { openToBandWork: checked },
+                        });
+                      }}
+                    />
+                    <ToggleSwitch
+                      label="Interested in Joining Bands"
+                      description="Get notified about new band opportunities"
+                      checked={user.interestedInBands || false}
+                      onChange={(checked) => {
+                        updateUser({
+                          userId: user._id as Id<"users">,
+                          clerkId: user.clerkId,
+                          updates: { interestedInBands: checked },
+                        });
+                      }}
+                    />
+                  </>
+                </SectionContainer>
+              ))}
             <SectionContainer
               icon={<Lock size={18} />}
               title="Account Type"

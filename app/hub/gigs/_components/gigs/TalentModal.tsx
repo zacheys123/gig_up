@@ -369,7 +369,7 @@ const TalentModal = ({
             <Badge
               key={item}
               variant="default"
-              className="bg-gradient-to-r from-blue-500 to-cyan-500"
+              className="bg-linear-to-r from-blue-500 to-cyan-500"
             >
               {item}
               <button
@@ -590,7 +590,7 @@ const TalentModal = ({
                         "cursor-pointer transition-all text-center",
                         Array.isArray(localData.mcLanguages) &&
                           localData.mcLanguages?.includes(language) &&
-                          "bg-gradient-to-r from-blue-500 to-cyan-500",
+                          "bg-linear-to-r from-blue-500 to-cyan-500",
                       )}
                       onClick={() => handleMcLanguageChange(language)}
                     >
@@ -672,7 +672,7 @@ const TalentModal = ({
                         "cursor-pointer transition-all text-center",
                         Array.isArray(localData.djGenre) &&
                           localData.djGenre?.includes(genre) &&
-                          "bg-gradient-to-r from-purple-500 to-pink-500",
+                          "bg-linear-to-r from-purple-500 to-pink-500",
                       )}
                       onClick={() => handleDjGenreChange(genre)}
                     >
@@ -749,7 +749,7 @@ const TalentModal = ({
                         "cursor-pointer transition-all text-center",
                         Array.isArray(localData.djEquipment) &&
                           localData.djEquipment?.includes(equipment) &&
-                          "bg-gradient-to-r from-green-500 to-emerald-500",
+                          "bg-linear-to-r from-green-500 to-emerald-500",
                       )}
                       onClick={() => handleDjEquipmentChange(equipment)}
                     >
@@ -830,7 +830,7 @@ const TalentModal = ({
                         "cursor-pointer transition-all text-center",
                         Array.isArray(localData.vocalistGenre) &&
                           localData.vocalistGenre?.includes(genre) &&
-                          "bg-gradient-to-r from-green-500 to-emerald-500",
+                          "bg-linear-to-r from-green-500 to-emerald-500",
                       )}
                       onClick={() => handleVocalistGenreChange(genre)}
                     >

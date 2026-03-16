@@ -93,7 +93,7 @@ export const FEATURE_FLAGS_CONFIG: Record<
   Omit<FeatureFlag, "enabled" | "createdAt" | "updatedAt">
 > = {
   // ==================== ROLE REGISTRATION FLAGS ====================
-  teacher_role: {
+  teacher_role: { 
     id: "teacher_role",
     name: "Teacher Role Registration",
     description: "Allow users to register as music teachers",

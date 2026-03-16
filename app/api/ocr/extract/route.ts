@@ -1,5 +1,4 @@
 // app/api/ocr/extract/route.ts
-import { ExtractedPaymentData } from "@/utils/paymentTypes";
 import { NextResponse } from "next/server";
 import { createWorker } from "tesseract.js";
 
@@ -15,28 +14,26 @@ const MPESA_PATTERNS = {
 
 export async function POST(req: Request) {
   try {
-    // Get form data instead of JSON
-    const formData = await req.formData();
-    const file = formData.get("file") as File | null;
+    const { imageUrl } = await req.json();
 
-    if (!file) {
+    if (!imageUrl) {
       return NextResponse.json(
-        { success: false, error: "No file provided" },
+        { success: false, error: "No image URL provided" },
+
         { status: 400 },
+
       );
     }
-
-    // Convert file to buffer for Tesseract
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
 
     // Initialize worker
     const worker = await createWorker("eng");
 
-    // Recognize text from image buffer
-    const {
-      data: { text, confidence },
-    } = await worker.recognize(buffer);
+
+
+    
+    // Recognize text from image
+    const { data: { text, confidence } } = await worker.recognize(imageUrl);
+    
 
     // Terminate worker
     await worker.terminate();
@@ -63,11 +60,12 @@ export async function POST(req: Request) {
     }
 
     // Extract sender/receiver
-    const namePattern =
-      /(?:to|from|sent to|received from)\s+([A-Za-z\s]+?)(?:\s+on|\s+at|\s+\d|$)/i;
+
+    const namePattern = /(?:to|from|sent to|received from)\s+([A-Za-z\s]+?)(?:\s+on|\s+at|\s+\d|$)/i;
+
     const nameMatch = cleanText.match(namePattern);
 
-    const extractedData: ExtractedPaymentData = {
+    const extractedData = {
       transactionId: transactionIdMatch?.[0] || null,
       amount: amount,
       date: dateMatch?.[0] || null,
@@ -79,15 +77,20 @@ export async function POST(req: Request) {
       confidence,
     };
 
+
     return NextResponse.json({
       success: true,
       data: extractedData,
     });
+
+
+
   } catch (error) {
     console.error("OCR extraction failed:", error);
     return NextResponse.json(
       { success: false, error: "OCR processing failed" },
-      { status: 500 },
+ { status: 500 },
     );
   }
 }
+    
