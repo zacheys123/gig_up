@@ -852,8 +852,7 @@ const SchedulerComponent = ({
           ? "Profile meets all requirements"
           : "Complete profile to unlock gig creation",
         action: !isProfileComplete ? "Complete" : null,
-        onClick: () =>
-          !isProfileComplete && window.open("/profile/edit", "_blank"),
+        onClick: () => !isProfileComplete && window.open("/profile", "_blank"),
       },
     ];
 
@@ -1707,9 +1706,7 @@ const SchedulerComponent = ({
                             </p>
                           </div>
                           <button
-                            onClick={() =>
-                              window.open("/profile/edit", "_blank")
-                            }
+                            onClick={() => window.open("/profile", "_blank")}
                             className="px-3 py-1.5 text-xs bg-linear-to-r from-red-600 to-red-700 text-white rounded-lg font-medium hover:from-red-700 hover:to-red-800 transition-all"
                           >
                             Complete
