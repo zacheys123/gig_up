@@ -41,6 +41,7 @@ import { PaymentConfirmation } from "./PaymentConfirmation";
 import { toast } from "sonner";
 import { useThemeColors } from "@/hooks/useTheme";
 import { cn } from "@/lib/utils";
+import { ChatIcon } from "../chat/ChatIcon";
 
 interface PaymentHubProps {
   gigId: Id<"gigs">;
@@ -48,13 +49,17 @@ interface PaymentHubProps {
   autoOpenConfirm?: boolean;
 }
 
-export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "confirm" | "history">(
-    autoOpenConfirm ? "confirm" : "overview"
-  );
+export function PaymentHub({
+  gigId,
+  userId,
+  autoOpenConfirm,
+}: PaymentHubProps) {
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "confirm" | "history"
+  >(autoOpenConfirm ? "confirm" : "overview");
   const [showFullOcr, setShowFullOcr] = useState(false);
   const { isDarkMode } = useThemeColors();
-  
+
   // Fetch all necessary data independently
   const gig = useQuery(api.controllers.gigs.getGigById, { gigId });
   const { user } = useCurrentUser();
@@ -70,8 +75,10 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
   // Get the other party's info - depends on gig and user
   const otherParty = useQuery(
     api.controllers.user.getUserById,
-    gig && user ? 
-      (user?.isMusician ? { userId: gig?.postedBy } : { userId: gig?.bookedBy }) 
+    gig && user
+      ? user?.isMusician
+        ? { userId: gig?.postedBy }
+        : { userId: gig?.bookedBy }
       : "skip",
   );
 
@@ -88,14 +95,18 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
   if (!gig) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <div className={cn(
-          "animate-spin rounded-full h-8 w-8 border-b-2",
-          isDarkMode ? "border-blue-500" : "border-blue-600"
-        )} />
-        <p className={cn(
-          "text-sm",
-          isDarkMode ? "text-slate-400" : "text-slate-500"
-        )}>
+        <div
+          className={cn(
+            "animate-spin rounded-full h-8 w-8 border-b-2",
+            isDarkMode ? "border-blue-500" : "border-blue-600",
+          )}
+        />
+        <p
+          className={cn(
+            "text-sm",
+            isDarkMode ? "text-slate-400" : "text-slate-500",
+          )}
+        >
           Loading gig details...
         </p>
       </div>
@@ -105,14 +116,18 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <div className={cn(
-          "animate-spin rounded-full h-8 w-8 border-b-2",
-          isDarkMode ? "border-blue-500" : "border-blue-600"
-        )} />
-        <p className={cn(
-          "text-sm",
-          isDarkMode ? "text-slate-400" : "text-slate-500"
-        )}>
+        <div
+          className={cn(
+            "animate-spin rounded-full h-8 w-8 border-b-2",
+            isDarkMode ? "border-blue-500" : "border-blue-600",
+          )}
+        />
+        <p
+          className={cn(
+            "text-sm",
+            isDarkMode ? "text-slate-400" : "text-slate-500",
+          )}
+        >
           Loading user data...
         </p>
       </div>
@@ -196,7 +211,8 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
   // Confidence color helper
   const getConfidenceColor = (confidence: number) => {
     if (confidence >= 90) return "text-green-600 bg-green-50 border-green-200";
-    if (confidence >= 70) return "text-yellow-600 bg-yellow-50 border-yellow-200";
+    if (confidence >= 70)
+      return "text-yellow-600 bg-yellow-50 border-yellow-200";
     return "text-red-600 bg-red-50 border-red-200";
   };
 
@@ -205,10 +221,12 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
       {/* Header with Gig Title and Quick Actions */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className={cn(
-            "text-2xl font-bold",
-            isDarkMode ? "text-white" : "text-slate-900"
-          )}>
+          <h1
+            className={cn(
+              "text-2xl font-bold",
+              isDarkMode ? "text-white" : "text-slate-900",
+            )}
+          >
             {gig.title}
           </h1>
           <p className={isDarkMode ? "text-slate-400" : "text-slate-500"}>
@@ -216,21 +234,21 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
           </p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             className={cn(
-              isDarkMode ? "border-slate-700 hover:bg-slate-800" : ""
+              isDarkMode ? "border-slate-700 hover:bg-slate-800" : "",
             )}
           >
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             className={cn(
-              isDarkMode ? "border-slate-700 hover:bg-slate-800" : ""
+              isDarkMode ? "border-slate-700 hover:bg-slate-800" : "",
             )}
           >
             <MessageSquare className="w-4 h-4 mr-2" />
@@ -240,31 +258,41 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
       </div>
 
       {/* Main Status Card */}
-      <Card className={cn(
-        "border-l-4 border-l-blue-500",
-        isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"
-      )}>
+      <Card
+        className={cn(
+          "border-l-4 border-l-blue-500",
+          isDarkMode
+            ? "bg-slate-900 border-slate-800"
+            : "bg-white border-slate-200",
+        )}
+      >
         <CardContent className="p-6">
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-4">
               {!paymentStatus ? (
                 // Skeleton loading for status
                 <>
-                  <div className={cn(
-                    "p-3 rounded-full animate-pulse",
-                    isDarkMode ? "bg-slate-800" : "bg-slate-200"
-                  )}>
+                  <div
+                    className={cn(
+                      "p-3 rounded-full animate-pulse",
+                      isDarkMode ? "bg-slate-800" : "bg-slate-200",
+                    )}
+                  >
                     <div className="w-6 h-6" />
                   </div>
                   <div className="space-y-2">
-                    <div className={cn(
-                      "h-6 w-32 rounded animate-pulse",
-                      isDarkMode ? "bg-slate-800" : "bg-slate-200"
-                    )} />
-                    <div className={cn(
-                      "h-4 w-48 rounded animate-pulse",
-                      isDarkMode ? "bg-slate-800" : "bg-slate-200"
-                    )} />
+                    <div
+                      className={cn(
+                        "h-6 w-32 rounded animate-pulse",
+                        isDarkMode ? "bg-slate-800" : "bg-slate-200",
+                      )}
+                    />
+                    <div
+                      className={cn(
+                        "h-4 w-48 rounded animate-pulse",
+                        isDarkMode ? "bg-slate-800" : "bg-slate-200",
+                      )}
+                    />
                   </div>
                 </>
               ) : (
@@ -273,40 +301,64 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
                     <StatusIcon className="w-6 h-6" />
                   </div>
                   <div>
-                    <h2 className={cn(
-                      "text-xl font-semibold",
-                      isDarkMode ? "text-white" : "text-slate-900"
-                    )}>
+                    <h2
+                      className={cn(
+                        "text-xl font-semibold",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
                       {status.label}
                     </h2>
-                    <p className={isDarkMode ? "text-slate-400" : "text-slate-500"}>
+                    <p
+                      className={
+                        isDarkMode ? "text-slate-400" : "text-slate-500"
+                      }
+                    >
                       {status.message}
                     </p>
                     <div className="flex items-center gap-4 mt-2">
                       <div className="flex items-center gap-1 text-sm">
-                        <Calendar className={cn(
-                          "w-4 h-4",
-                          isDarkMode ? "text-slate-500" : "text-slate-400"
-                        )} />
-                        <span className={isDarkMode ? "text-slate-300" : "text-slate-600"}>
+                        <Calendar
+                          className={cn(
+                            "w-4 h-4",
+                            isDarkMode ? "text-slate-500" : "text-slate-400",
+                          )}
+                        />
+                        <span
+                          className={
+                            isDarkMode ? "text-slate-300" : "text-slate-600"
+                          }
+                        >
                           {format(gig.date, "MMM d, yyyy")}
                         </span>
                       </div>
                       <div className="flex items-center gap-1 text-sm">
-                        <Clock className={cn(
-                          "w-4 h-4",
-                          isDarkMode ? "text-slate-500" : "text-slate-400"
-                        )} />
-                        <span className={isDarkMode ? "text-slate-300" : "text-slate-600"}>
+                        <Clock
+                          className={cn(
+                            "w-4 h-4",
+                            isDarkMode ? "text-slate-500" : "text-slate-400",
+                          )}
+                        />
+                        <span
+                          className={
+                            isDarkMode ? "text-slate-300" : "text-slate-600"
+                          }
+                        >
                           {gig.time?.start} - {gig.time?.end}
                         </span>
                       </div>
                       <div className="flex items-center gap-1 text-sm">
-                        <MapPin className={cn(
-                          "w-4 h-4",
-                          isDarkMode ? "text-slate-500" : "text-slate-400"
-                        )} />
-                        <span className={isDarkMode ? "text-slate-300" : "text-slate-600"}>
+                        <MapPin
+                          className={cn(
+                            "w-4 h-4",
+                            isDarkMode ? "text-slate-500" : "text-slate-400",
+                          )}
+                        />
+                        <span
+                          className={
+                            isDarkMode ? "text-slate-300" : "text-slate-600"
+                          }
+                        >
                           {gig.location || "Location TBD"}
                         </span>
                       </div>
@@ -319,10 +371,12 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
               <p className={isDarkMode ? "text-slate-400" : "text-slate-500"}>
                 Amount
               </p>
-              <p className={cn(
-                "text-3xl font-bold",
-                isDarkMode ? "text-white" : "text-slate-900"
-              )}>
+              <p
+                className={cn(
+                  "text-3xl font-bold",
+                  isDarkMode ? "text-white" : "text-slate-900",
+                )}
+              >
                 KES {gig.price?.toLocaleString()}
               </p>
             </div>
@@ -340,19 +394,22 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
             onValueChange={(v: any) => setActiveTab(v)}
             className="w-full"
           >
-            <TabsList className={cn(
-              "grid w-full grid-cols-3",
-              isDarkMode ? "bg-slate-800" : "bg-slate-100"
-            )}>
+            <TabsList
+              className={cn(
+                "grid w-full grid-cols-3",
+                isDarkMode ? "bg-slate-800" : "bg-slate-100",
+              )}
+            >
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="confirm">
                 Confirm Payment
-                {paymentStatus && (
+                {paymentStatus &&
                   (!paymentStatus.musicianConfirmed ||
                     !paymentStatus.clientConfirmed) && (
-                    <Badge variant="destructive" className="ml-2">1</Badge>
-                  )
-                )}
+                    <Badge variant="destructive" className="ml-2">
+                      1
+                    </Badge>
+                  )}
               </TabsTrigger>
               <TabsTrigger value="history">Activity History</TabsTrigger>
             </TabsList>
@@ -360,12 +417,16 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
             {/* Overview Tab */}
             <TabsContent value="overview" className="space-y-4 mt-4">
               {/* Payment Progress Card */}
-              <Card className={isDarkMode ? "bg-slate-900 border-slate-800" : ""}>
+              <Card
+                className={isDarkMode ? "bg-slate-900 border-slate-800" : ""}
+              >
                 <CardHeader>
                   <CardTitle className={isDarkMode ? "text-white" : ""}>
                     Payment Progress
                   </CardTitle>
-                  <CardDescription className={isDarkMode ? "text-slate-400" : ""}>
+                  <CardDescription
+                    className={isDarkMode ? "text-slate-400" : ""}
+                  >
                     Current status of payment confirmations
                   </CardDescription>
                 </CardHeader>
@@ -373,20 +434,28 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
                   {!paymentStatus ? (
                     // Skeleton loading
                     <div className="space-y-4">
-                      <div className={cn(
-                        "h-2 w-full rounded animate-pulse",
-                        isDarkMode ? "bg-slate-800" : "bg-slate-200"
-                      )} />
-                      <div className={cn(
-                        "h-2 w-full rounded animate-pulse",
-                        isDarkMode ? "bg-slate-800" : "bg-slate-200"
-                      )} />
+                      <div
+                        className={cn(
+                          "h-2 w-full rounded animate-pulse",
+                          isDarkMode ? "bg-slate-800" : "bg-slate-200",
+                        )}
+                      />
+                      <div
+                        className={cn(
+                          "h-2 w-full rounded animate-pulse",
+                          isDarkMode ? "bg-slate-800" : "bg-slate-200",
+                        )}
+                      />
                     </div>
                   ) : (
                     <>
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
-                          <span className={isDarkMode ? "text-slate-300" : "text-slate-600"}>
+                          <span
+                            className={
+                              isDarkMode ? "text-slate-300" : "text-slate-600"
+                            }
+                          >
                             Musician Confirmation
                           </span>
                           <span className="font-medium">
@@ -403,7 +472,11 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
 
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
-                          <span className={isDarkMode ? "text-slate-300" : "text-slate-600"}>
+                          <span
+                            className={
+                              isDarkMode ? "text-slate-300" : "text-slate-600"
+                            }
+                          >
                             Client Confirmation
                           </span>
                           <span className="font-medium">
@@ -428,15 +501,35 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
                           </div>
                           {paymentStatus.verification.ocrConfidence && (
                             <div className="mt-2 text-sm">
-                              <p className={isDarkMode ? "text-slate-300" : "text-slate-600"}>
+                              <p
+                                className={
+                                  isDarkMode
+                                    ? "text-slate-300"
+                                    : "text-slate-600"
+                                }
+                              >
                                 OCR Confidence:
                               </p>
                               <div className="flex gap-4 mt-1">
-                                <span className={isDarkMode ? "text-slate-300" : ""}>
-                                  Musician: {paymentStatus.verification.ocrConfidence.musician}%
+                                <span
+                                  className={isDarkMode ? "text-slate-300" : ""}
+                                >
+                                  Musician:{" "}
+                                  {
+                                    paymentStatus.verification.ocrConfidence
+                                      .musician
+                                  }
+                                  %
                                 </span>
-                                <span className={isDarkMode ? "text-slate-300" : ""}>
-                                  Client: {paymentStatus.verification.ocrConfidence.client}%
+                                <span
+                                  className={isDarkMode ? "text-slate-300" : ""}
+                                >
+                                  Client:{" "}
+                                  {
+                                    paymentStatus.verification.ocrConfidence
+                                      .client
+                                  }
+                                  %
                                 </span>
                               </div>
                             </div>
@@ -449,16 +542,22 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
               </Card>
 
               {/* OCR Data Display */}
-              {paymentStatus && (
+              {paymentStatus &&
                 (paymentStatus.musicianConfirm?.extractedData ||
                   paymentStatus.clientConfirm?.extractedData) && (
-                  <Card className={isDarkMode ? "bg-slate-900 border-slate-800" : ""}>
+                  <Card
+                    className={
+                      isDarkMode ? "bg-slate-900 border-slate-800" : ""
+                    }
+                  >
                     <CardHeader className="flex flex-row items-center justify-between">
                       <div>
                         <CardTitle className={isDarkMode ? "text-white" : ""}>
                           OCR Extracted Data
                         </CardTitle>
-                        <CardDescription className={isDarkMode ? "text-slate-400" : ""}>
+                        <CardDescription
+                          className={isDarkMode ? "text-slate-400" : ""}
+                        >
                           Automatically detected from screenshots
                         </CardDescription>
                       </div>
@@ -480,50 +579,112 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
                         {/* Musician OCR */}
                         {paymentStatus.musicianConfirm?.extractedData && (
                           <div className="space-y-2">
-                            <p className={cn(
-                              "font-medium flex items-center gap-2",
-                              isDarkMode ? "text-white" : "text-slate-900"
-                            )}>
+                            <p
+                              className={cn(
+                                "font-medium flex items-center gap-2",
+                                isDarkMode ? "text-white" : "text-slate-900",
+                              )}
+                            >
                               <User className="w-4 h-4" /> Musician's Upload
-                              <span className={`text-xs px-2 py-1 rounded ${getConfidenceColor(
-                                paymentStatus.musicianConfirm.extractedData.confidence
-                              )}`}>
-                                {paymentStatus.musicianConfirm.extractedData.confidence}%
+                              <span
+                                className={`text-xs px-2 py-1 rounded ${getConfidenceColor(
+                                  paymentStatus.musicianConfirm.extractedData
+                                    .confidence,
+                                )}`}
+                              >
+                                {
+                                  paymentStatus.musicianConfirm.extractedData
+                                    .confidence
+                                }
+                                %
                               </span>
                             </p>
                             <div className="text-sm space-y-1">
                               <p>
-                                <span className={isDarkMode ? "text-slate-400" : "text-slate-500"}>
+                                <span
+                                  className={
+                                    isDarkMode
+                                      ? "text-slate-400"
+                                      : "text-slate-500"
+                                  }
+                                >
                                   Tx ID:
                                 </span>{" "}
-                                <span className={isDarkMode ? "text-slate-300" : "text-slate-700"}>
-                                  {paymentStatus.musicianConfirm.extractedData.transactionId || "Not detected"}
+                                <span
+                                  className={
+                                    isDarkMode
+                                      ? "text-slate-300"
+                                      : "text-slate-700"
+                                  }
+                                >
+                                  {paymentStatus.musicianConfirm.extractedData
+                                    .transactionId || "Not detected"}
                                 </span>
                               </p>
                               <p>
-                                <span className={isDarkMode ? "text-slate-400" : "text-slate-500"}>
+                                <span
+                                  className={
+                                    isDarkMode
+                                      ? "text-slate-400"
+                                      : "text-slate-500"
+                                  }
+                                >
                                   Amount:
                                 </span>{" "}
-                                <span className={isDarkMode ? "text-slate-300" : "text-slate-700"}>
-                                  KES {paymentStatus.musicianConfirm.extractedData.amount?.toLocaleString() || "Not detected"}
+                                <span
+                                  className={
+                                    isDarkMode
+                                      ? "text-slate-300"
+                                      : "text-slate-700"
+                                  }
+                                >
+                                  KES{" "}
+                                  {paymentStatus.musicianConfirm.extractedData.amount?.toLocaleString() ||
+                                    "Not detected"}
                                 </span>
                               </p>
                               {showFullOcr && (
                                 <>
                                   <p>
-                                    <span className={isDarkMode ? "text-slate-400" : "text-slate-500"}>
+                                    <span
+                                      className={
+                                        isDarkMode
+                                          ? "text-slate-400"
+                                          : "text-slate-500"
+                                      }
+                                    >
                                       Date:
                                     </span>{" "}
-                                    <span className={isDarkMode ? "text-slate-300" : "text-slate-700"}>
-                                      {paymentStatus.musicianConfirm.extractedData.date || "Not detected"}
+                                    <span
+                                      className={
+                                        isDarkMode
+                                          ? "text-slate-300"
+                                          : "text-slate-700"
+                                      }
+                                    >
+                                      {paymentStatus.musicianConfirm
+                                        .extractedData.date || "Not detected"}
                                     </span>
                                   </p>
                                   <p>
-                                    <span className={isDarkMode ? "text-slate-400" : "text-slate-500"}>
+                                    <span
+                                      className={
+                                        isDarkMode
+                                          ? "text-slate-400"
+                                          : "text-slate-500"
+                                      }
+                                    >
                                       Time:
                                     </span>{" "}
-                                    <span className={isDarkMode ? "text-slate-300" : "text-slate-700"}>
-                                      {paymentStatus.musicianConfirm.extractedData.time || "Not detected"}
+                                    <span
+                                      className={
+                                        isDarkMode
+                                          ? "text-slate-300"
+                                          : "text-slate-700"
+                                      }
+                                    >
+                                      {paymentStatus.musicianConfirm
+                                        .extractedData.time || "Not detected"}
                                     </span>
                                   </p>
                                 </>
@@ -535,50 +696,112 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
                         {/* Client OCR */}
                         {paymentStatus.clientConfirm?.extractedData && (
                           <div className="space-y-2">
-                            <p className={cn(
-                              "font-medium flex items-center gap-2",
-                              isDarkMode ? "text-white" : "text-slate-900"
-                            )}>
+                            <p
+                              className={cn(
+                                "font-medium flex items-center gap-2",
+                                isDarkMode ? "text-white" : "text-slate-900",
+                              )}
+                            >
                               <User className="w-4 h-4" /> Client's Upload
-                              <span className={`text-xs px-2 py-1 rounded ${getConfidenceColor(
-                                paymentStatus.clientConfirm.extractedData.confidence
-                              )}`}>
-                                {paymentStatus.clientConfirm.extractedData.confidence}%
+                              <span
+                                className={`text-xs px-2 py-1 rounded ${getConfidenceColor(
+                                  paymentStatus.clientConfirm.extractedData
+                                    .confidence,
+                                )}`}
+                              >
+                                {
+                                  paymentStatus.clientConfirm.extractedData
+                                    .confidence
+                                }
+                                %
                               </span>
                             </p>
                             <div className="text-sm space-y-1">
                               <p>
-                                <span className={isDarkMode ? "text-slate-400" : "text-slate-500"}>
+                                <span
+                                  className={
+                                    isDarkMode
+                                      ? "text-slate-400"
+                                      : "text-slate-500"
+                                  }
+                                >
                                   Tx ID:
                                 </span>{" "}
-                                <span className={isDarkMode ? "text-slate-300" : "text-slate-700"}>
-                                  {paymentStatus.clientConfirm.extractedData.transactionId || "Not detected"}
+                                <span
+                                  className={
+                                    isDarkMode
+                                      ? "text-slate-300"
+                                      : "text-slate-700"
+                                  }
+                                >
+                                  {paymentStatus.clientConfirm.extractedData
+                                    .transactionId || "Not detected"}
                                 </span>
                               </p>
                               <p>
-                                <span className={isDarkMode ? "text-slate-400" : "text-slate-500"}>
+                                <span
+                                  className={
+                                    isDarkMode
+                                      ? "text-slate-400"
+                                      : "text-slate-500"
+                                  }
+                                >
                                   Amount:
                                 </span>{" "}
-                                <span className={isDarkMode ? "text-slate-300" : "text-slate-700"}>
-                                  KES {paymentStatus.clientConfirm.extractedData.amount?.toLocaleString() || "Not detected"}
+                                <span
+                                  className={
+                                    isDarkMode
+                                      ? "text-slate-300"
+                                      : "text-slate-700"
+                                  }
+                                >
+                                  KES{" "}
+                                  {paymentStatus.clientConfirm.extractedData.amount?.toLocaleString() ||
+                                    "Not detected"}
                                 </span>
                               </p>
                               {showFullOcr && (
                                 <>
                                   <p>
-                                    <span className={isDarkMode ? "text-slate-400" : "text-slate-500"}>
+                                    <span
+                                      className={
+                                        isDarkMode
+                                          ? "text-slate-400"
+                                          : "text-slate-500"
+                                      }
+                                    >
                                       Date:
                                     </span>{" "}
-                                    <span className={isDarkMode ? "text-slate-300" : "text-slate-700"}>
-                                      {paymentStatus.clientConfirm.extractedData.date || "Not detected"}
+                                    <span
+                                      className={
+                                        isDarkMode
+                                          ? "text-slate-300"
+                                          : "text-slate-700"
+                                      }
+                                    >
+                                      {paymentStatus.clientConfirm.extractedData
+                                        .date || "Not detected"}
                                     </span>
                                   </p>
                                   <p>
-                                    <span className={isDarkMode ? "text-slate-400" : "text-slate-500"}>
+                                    <span
+                                      className={
+                                        isDarkMode
+                                          ? "text-slate-400"
+                                          : "text-slate-500"
+                                      }
+                                    >
                                       Time:
                                     </span>{" "}
-                                    <span className={isDarkMode ? "text-slate-300" : "text-slate-700"}>
-                                      {paymentStatus.clientConfirm.extractedData.time || "Not detected"}
+                                    <span
+                                      className={
+                                        isDarkMode
+                                          ? "text-slate-300"
+                                          : "text-slate-700"
+                                      }
+                                    >
+                                      {paymentStatus.clientConfirm.extractedData
+                                        .time || "Not detected"}
                                     </span>
                                   </p>
                                 </>
@@ -592,57 +815,95 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
                       {paymentStatus.musicianConfirm?.extractedData &&
                         paymentStatus.clientConfirm?.extractedData && (
                           <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                            <p className={cn(
-                              "text-sm font-medium mb-2",
-                              isDarkMode ? "text-white" : "text-slate-900"
-                            )}>
+                            <p
+                              className={cn(
+                                "text-sm font-medium mb-2",
+                                isDarkMode ? "text-white" : "text-slate-900",
+                              )}
+                            >
                               Comparison Result:
                             </p>
                             <div className="grid grid-cols-3 gap-2 text-sm">
                               <div className="text-center">
-                                <p className={isDarkMode ? "text-slate-400" : "text-slate-500"}>
+                                <p
+                                  className={
+                                    isDarkMode
+                                      ? "text-slate-400"
+                                      : "text-slate-500"
+                                  }
+                                >
                                   Transaction ID
                                 </p>
-                                <p className={
-                                  paymentStatus.musicianConfirm.extractedData.transactionId ===
-                                  paymentStatus.clientConfirm.extractedData.transactionId
-                                    ? "text-green-600"
-                                    : "text-red-600"
-                                }>
-                                  {paymentStatus.musicianConfirm.extractedData.transactionId ===
-                                   paymentStatus.clientConfirm.extractedData.transactionId
+                                <p
+                                  className={
+                                    paymentStatus.musicianConfirm.extractedData
+                                      .transactionId ===
+                                    paymentStatus.clientConfirm.extractedData
+                                      .transactionId
+                                      ? "text-green-600"
+                                      : "text-red-600"
+                                  }
+                                >
+                                  {paymentStatus.musicianConfirm.extractedData
+                                    .transactionId ===
+                                  paymentStatus.clientConfirm.extractedData
+                                    .transactionId
                                     ? "✓ Match"
                                     : "✗ Mismatch"}
                                 </p>
                               </div>
                               <div className="text-center">
-                                <p className={isDarkMode ? "text-slate-400" : "text-slate-500"}>
+                                <p
+                                  className={
+                                    isDarkMode
+                                      ? "text-slate-400"
+                                      : "text-slate-500"
+                                  }
+                                >
                                   Amount
                                 </p>
-                                <p className={
-                                  paymentStatus.musicianConfirm.extractedData.amount ===
-                                  paymentStatus.clientConfirm.extractedData.amount
-                                    ? "text-green-600"
-                                    : "text-red-600"
-                                }>
-                                  {paymentStatus.musicianConfirm.extractedData.amount ===
-                                   paymentStatus.clientConfirm.extractedData.amount
+                                <p
+                                  className={
+                                    paymentStatus.musicianConfirm.extractedData
+                                      .amount ===
+                                    paymentStatus.clientConfirm.extractedData
+                                      .amount
+                                      ? "text-green-600"
+                                      : "text-red-600"
+                                  }
+                                >
+                                  {paymentStatus.musicianConfirm.extractedData
+                                    .amount ===
+                                  paymentStatus.clientConfirm.extractedData
+                                    .amount
                                     ? "✓ Match"
                                     : "✗ Mismatch"}
                                 </p>
                               </div>
                               <div className="text-center">
-                                <p className={isDarkMode ? "text-slate-400" : "text-slate-500"}>
+                                <p
+                                  className={
+                                    isDarkMode
+                                      ? "text-slate-400"
+                                      : "text-slate-500"
+                                  }
+                                >
                                   Confidence
                                 </p>
-                                <p className={
-                                  paymentStatus.musicianConfirm.extractedData.confidence >= 70 &&
-                                  paymentStatus.clientConfirm.extractedData.confidence >= 70
-                                    ? "text-green-600"
-                                    : "text-yellow-600"
-                                }>
-                                  {paymentStatus.musicianConfirm.extractedData.confidence >= 70 &&
-                                   paymentStatus.clientConfirm.extractedData.confidence >= 70
+                                <p
+                                  className={
+                                    paymentStatus.musicianConfirm.extractedData
+                                      .confidence >= 70 &&
+                                    paymentStatus.clientConfirm.extractedData
+                                      .confidence >= 70
+                                      ? "text-green-600"
+                                      : "text-yellow-600"
+                                  }
+                                >
+                                  {paymentStatus.musicianConfirm.extractedData
+                                    .confidence >= 70 &&
+                                  paymentStatus.clientConfirm.extractedData
+                                    .confidence >= 70
                                     ? "✓ Good"
                                     : "⚠ Low"}
                                 </p>
@@ -652,30 +913,36 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
                         )}
                     </CardContent>
                   </Card>
-                )
-              )}
+                )}
             </TabsContent>
 
             {/* Confirm Payment Tab */}
             <TabsContent value="confirm" className="mt-4">
               {!paymentStatus ? (
-                <Card className={isDarkMode ? "bg-slate-900 border-slate-800" : ""}>
+                <Card
+                  className={isDarkMode ? "bg-slate-900 border-slate-800" : ""}
+                >
                   <CardContent className="p-6">
                     <div className="flex flex-col items-center justify-center py-8">
-                      <div className={cn(
-                        "animate-spin rounded-full h-8 w-8 border-b-2",
-                        isDarkMode ? "border-blue-500" : "border-blue-600"
-                      )} />
-                      <p className={cn(
-                        "mt-4 text-sm",
-                        isDarkMode ? "text-slate-400" : "text-slate-500"
-                      )}>
+                      <div
+                        className={cn(
+                          "animate-spin rounded-full h-8 w-8 border-b-2",
+                          isDarkMode ? "border-blue-500" : "border-blue-600",
+                        )}
+                      />
+                      <p
+                        className={cn(
+                          "mt-4 text-sm",
+                          isDarkMode ? "text-slate-400" : "text-slate-500",
+                        )}
+                      >
                         Loading payment status...
                       </p>
                     </div>
                   </CardContent>
                 </Card>
-              ) : !paymentStatus.musicianConfirmed || !paymentStatus.clientConfirmed ? (
+              ) : !paymentStatus.musicianConfirmed ||
+                !paymentStatus.clientConfirmed ? (
                 <PaymentConfirmation
                   gigId={gigId}
                   userRole={userRole}
@@ -688,20 +955,27 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
                   isDarkMode={isDarkMode}
                 />
               ) : (
-                <Card className={isDarkMode ? "bg-slate-900 border-slate-800" : ""}>
+                <Card
+                  className={isDarkMode ? "bg-slate-900 border-slate-800" : ""}
+                >
                   <CardContent className="p-6 text-center">
                     <CheckCircle className="w-12 h-12 text-green-600 mx-auto mb-4" />
-                    <h3 className={cn(
-                      "text-lg font-semibold mb-2",
-                      isDarkMode ? "text-white" : "text-slate-900"
-                    )}>
+                    <h3
+                      className={cn(
+                        "text-lg font-semibold mb-2",
+                        isDarkMode ? "text-white" : "text-slate-900",
+                      )}
+                    >
                       All Confirmations Received
                     </h3>
-                    <p className={cn(
-                      "mb-4",
-                      isDarkMode ? "text-slate-400" : "text-slate-500"
-                    )}>
-                      Both parties have confirmed. Waiting for system verification.
+                    <p
+                      className={cn(
+                        "mb-4",
+                        isDarkMode ? "text-slate-400" : "text-slate-500",
+                      )}
+                    >
+                      Both parties have confirmed. Waiting for system
+                      verification.
                     </p>
                     <Button onClick={() => setActiveTab("overview")}>
                       View Status
@@ -714,39 +988,51 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
             {/* Activity History Tab */}
             <TabsContent value="history" className="space-y-4 mt-4">
               {!gigMails ? (
-                <Card className={isDarkMode ? "bg-slate-900 border-slate-800" : ""}>
+                <Card
+                  className={isDarkMode ? "bg-slate-900 border-slate-800" : ""}
+                >
                   <CardContent className="p-6">
                     <div className="flex flex-col items-center justify-center py-8">
-                      <div className={cn(
-                        "animate-spin rounded-full h-8 w-8 border-b-2",
-                        isDarkMode ? "border-blue-500" : "border-blue-600"
-                      )} />
-                      <p className={cn(
-                        "mt-4 text-sm",
-                        isDarkMode ? "text-slate-400" : "text-slate-500"
-                      )}>
+                      <div
+                        className={cn(
+                          "animate-spin rounded-full h-8 w-8 border-b-2",
+                          isDarkMode ? "border-blue-500" : "border-blue-600",
+                        )}
+                      />
+                      <p
+                        className={cn(
+                          "mt-4 text-sm",
+                          isDarkMode ? "text-slate-400" : "text-slate-500",
+                        )}
+                      >
                         Loading activity history...
                       </p>
                     </div>
                   </CardContent>
                 </Card>
               ) : (
-                <Card className={isDarkMode ? "bg-slate-900 border-slate-800" : ""}>
+                <Card
+                  className={isDarkMode ? "bg-slate-900 border-slate-800" : ""}
+                >
                   <CardHeader>
                     <CardTitle className={isDarkMode ? "text-white" : ""}>
                       Payment Activity
                     </CardTitle>
-                    <CardDescription className={isDarkMode ? "text-slate-400" : ""}>
+                    <CardDescription
+                      className={isDarkMode ? "text-slate-400" : ""}
+                    >
                       All payment-related updates for this gig
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
                       {gigMails.length === 0 ? (
-                        <p className={cn(
-                          "text-center py-8",
-                          isDarkMode ? "text-slate-400" : "text-slate-500"
-                        )}>
+                        <p
+                          className={cn(
+                            "text-center py-8",
+                            isDarkMode ? "text-slate-400" : "text-slate-500",
+                          )}
+                        >
                           No activity yet
                         </p>
                       ) : (
@@ -755,7 +1041,7 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
                             key={mail._id}
                             className={cn(
                               "flex gap-3 p-3 rounded-lg",
-                              isDarkMode ? "bg-slate-800" : "bg-slate-50"
+                              isDarkMode ? "bg-slate-800" : "bg-slate-50",
                             )}
                           >
                             <div className="mt-1">
@@ -771,38 +1057,58 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center justify-between">
-                                <p className={cn(
-                                  "font-medium",
-                                  isDarkMode ? "text-white" : "text-slate-900"
-                                )}>
+                                <p
+                                  className={cn(
+                                    "font-medium",
+                                    isDarkMode
+                                      ? "text-white"
+                                      : "text-slate-900",
+                                  )}
+                                >
                                   {mail.subject}
                                 </p>
-                                <span className={cn(
-                                  "text-xs",
-                                  isDarkMode ? "text-slate-500" : "text-slate-400"
-                                )}>
+                                <span
+                                  className={cn(
+                                    "text-xs",
+                                    isDarkMode
+                                      ? "text-slate-500"
+                                      : "text-slate-400",
+                                  )}
+                                >
                                   {format(mail.createdAt, "MMM d, h:mm a")}
                                 </span>
                               </div>
-                              <p className={cn(
-                                "text-sm mt-1",
-                                isDarkMode ? "text-slate-400" : "text-slate-600"
-                              )}>
+                              <p
+                                className={cn(
+                                  "text-sm mt-1",
+                                  isDarkMode
+                                    ? "text-slate-400"
+                                    : "text-slate-600",
+                                )}
+                              >
                                 {mail.message}
                               </p>
                               {mail.amount && (
-                                <p className={cn(
-                                  "text-sm font-medium mt-1",
-                                  isDarkMode ? "text-white" : "text-slate-900"
-                                )}>
+                                <p
+                                  className={cn(
+                                    "text-sm font-medium mt-1",
+                                    isDarkMode
+                                      ? "text-white"
+                                      : "text-slate-900",
+                                  )}
+                                >
                                   KES {mail.amount.toLocaleString()}
                                 </p>
                               )}
                               {mail.transactionId && (
-                                <p className={cn(
-                                  "text-xs font-mono mt-1",
-                                  isDarkMode ? "text-slate-500" : "text-slate-400"
-                                )}>
+                                <p
+                                  className={cn(
+                                    "text-xs font-mono mt-1",
+                                    isDarkMode
+                                      ? "text-slate-500"
+                                      : "text-slate-400",
+                                  )}
+                                >
                                   TX: {mail.transactionId}
                                 </p>
                               )}
@@ -824,16 +1130,20 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
             <Card className={isDarkMode ? "bg-slate-900 border-slate-800" : ""}>
               <CardContent className="p-6">
                 <div className="flex items-center justify-center py-4">
-                  <div className={cn(
-                    "animate-spin rounded-full h-6 w-6 border-b-2",
-                    isDarkMode ? "border-blue-500" : "border-blue-600"
-                  )} />
+                  <div
+                    className={cn(
+                      "animate-spin rounded-full h-6 w-6 border-b-2",
+                      isDarkMode ? "border-blue-500" : "border-blue-600",
+                    )}
+                  />
                 </div>
               </CardContent>
             </Card>
           ) : (
             <>
-              <Card className={isDarkMode ? "bg-slate-900 border-slate-800" : ""}>
+              <Card
+                className={isDarkMode ? "bg-slate-900 border-slate-800" : ""}
+              >
                 <CardHeader>
                   <CardTitle className={isDarkMode ? "text-white" : ""}>
                     {otherPartyRole} Details
@@ -843,20 +1153,32 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
                   <div className="flex items-center gap-3">
                     <Avatar className="w-12 h-12">
                       <AvatarImage src={otherParty?.picture} />
-                      <AvatarFallback className={isDarkMode ? "bg-slate-800" : ""}>
-                        {otherParty?.firstname?.charAt(0) || otherParty?.username?.charAt(0) || "U"}
+                      <AvatarFallback
+                        className={isDarkMode ? "bg-slate-800" : ""}
+                      >
+                        {otherParty?.firstname?.charAt(0) ||
+                          otherParty?.username?.charAt(0) ||
+                          "U"}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className={cn(
-                        "font-semibold",
-                        isDarkMode ? "text-white" : "text-slate-900"
-                      )}>
-                        {otherParty?.firstname || otherParty?.username || "Unknown"}
+                      <p
+                        className={cn(
+                          "font-semibold",
+                          isDarkMode ? "text-white" : "text-slate-900",
+                        )}
+                      >
+                        {otherParty?.firstname ||
+                          otherParty?.username ||
+                          "Unknown"}
                       </p>
                       <div className="flex items-center gap-1 text-sm">
                         <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-                        <span className={isDarkMode ? "text-slate-400" : "text-slate-500"}>
+                        <span
+                          className={
+                            isDarkMode ? "text-slate-400" : "text-slate-500"
+                          }
+                        >
                           {otherParty?.avgRating?.toFixed(1) || "New"}
                         </span>
                       </div>
@@ -868,33 +1190,51 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
                   <div className="space-y-2 text-sm">
                     {otherParty?.phone && (
                       <div className="flex items-center gap-2">
-                        <Phone className={cn(
-                          "w-4 h-4",
-                          isDarkMode ? "text-slate-500" : "text-slate-400"
-                        )} />
-                        <span className={isDarkMode ? "text-slate-300" : "text-slate-600"}>
+                        <Phone
+                          className={cn(
+                            "w-4 h-4",
+                            isDarkMode ? "text-slate-500" : "text-slate-400",
+                          )}
+                        />
+                        <span
+                          className={
+                            isDarkMode ? "text-slate-300" : "text-slate-600"
+                          }
+                        >
                           {otherParty.phone}
                         </span>
                       </div>
                     )}
                     {otherParty?.email && (
                       <div className="flex items-center gap-2">
-                        <Mail className={cn(
-                          "w-4 h-4",
-                          isDarkMode ? "text-slate-500" : "text-slate-400"
-                        )} />
-                        <span className={isDarkMode ? "text-slate-300" : "text-slate-600"}>
+                        <Mail
+                          className={cn(
+                            "w-4 h-4",
+                            isDarkMode ? "text-slate-500" : "text-slate-400",
+                          )}
+                        />
+                        <span
+                          className={
+                            isDarkMode ? "text-slate-300" : "text-slate-600"
+                          }
+                        >
                           {otherParty.email}
                         </span>
                       </div>
                     )}
                     {otherParty?.city && (
                       <div className="flex items-center gap-2">
-                        <MapPin className={cn(
-                          "w-4 h-4",
-                          isDarkMode ? "text-slate-500" : "text-slate-400"
-                        )} />
-                        <span className={isDarkMode ? "text-slate-300" : "text-slate-600"}>
+                        <MapPin
+                          className={cn(
+                            "w-4 h-4",
+                            isDarkMode ? "text-slate-500" : "text-slate-400",
+                          )}
+                        />
+                        <span
+                          className={
+                            isDarkMode ? "text-slate-300" : "text-slate-600"
+                          }
+                        >
                           {otherParty.city}
                         </span>
                       </div>
@@ -906,13 +1246,19 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
                   {/* Trust/Reliability Stats */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className={isDarkMode ? "text-slate-400" : "text-slate-500"}>
+                      <span
+                        className={
+                          isDarkMode ? "text-slate-400" : "text-slate-500"
+                        }
+                      >
                         Trust Score
                       </span>
-                      <span className={cn(
-                        "font-medium",
-                        isDarkMode ? "text-white" : "text-slate-900"
-                      )}>
+                      <span
+                        className={cn(
+                          "font-medium",
+                          isDarkMode ? "text-white" : "text-slate-900",
+                        )}
+                      >
                         {otherParty?.trustScore || 50}%
                       </span>
                     </div>
@@ -920,66 +1266,71 @@ export function PaymentHub({ gigId, userId, autoOpenConfirm }: PaymentHubProps) 
                       value={otherParty?.trustScore || 50}
                       className={cn(
                         "h-2",
-                        isDarkMode ? "bg-slate-800" : "bg-slate-100"
+                        isDarkMode ? "bg-slate-800" : "bg-slate-100",
                       )}
                     />
 
                     <div className="flex justify-between text-xs mt-2">
-                      <span className={isDarkMode ? "text-slate-500" : "text-slate-400"}>
+                      <span
+                        className={
+                          isDarkMode ? "text-slate-500" : "text-slate-400"
+                        }
+                      >
                         Completed: {otherParty?.completedGigsCount || 0}
                       </span>
-                      <span className={isDarkMode ? "text-slate-500" : "text-slate-400"}>
+                      <span
+                        className={
+                          isDarkMode ? "text-slate-500" : "text-slate-400"
+                        }
+                      >
                         Disputes: {otherParty?.disputesCount || 0}
                       </span>
                     </div>
                   </div>
 
-                  <Button 
-                    variant="outline" 
-                    className={cn(
-                      "w-full",
-                      isDarkMode ? "border-slate-700 hover:bg-slate-800" : ""
-                    )}
-                  >
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Message {otherPartyRole}
-                  </Button>
+                  <ChatIcon
+                    userId={otherParty?._id}
+                    showText={true}
+                    text={`Message ${otherPartyRole}`}
+                  />
                 </CardContent>
               </Card>
 
               {/* Quick Actions Card */}
-              <Card className={isDarkMode ? "bg-slate-900 border-slate-800" : ""}>
+              <Card
+                className={isDarkMode ? "bg-slate-900 border-slate-800" : ""}
+              >
                 <CardHeader>
                   <CardTitle className={isDarkMode ? "text-white" : ""}>
                     Quick Actions
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     className={cn(
                       "w-full justify-start",
-                      isDarkMode ? "hover:bg-slate-800 text-slate-300" : ""
+                      isDarkMode ? "hover:bg-slate-800 text-slate-300" : "",
                     )}
                   >
                     <Eye className="w-4 h-4 mr-2" />
                     View Gig Details
                   </Button>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     className={cn(
                       "w-full justify-start",
-                      isDarkMode ? "hover:bg-slate-800 text-slate-300" : ""
+                      isDarkMode ? "hover:bg-slate-800 text-slate-300" : "",
                     )}
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Download Receipts
                   </Button>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     className={cn(
                       "w-full justify-start",
-                      isDarkMode ? "hover:bg-slate-800 text-slate-300" : ""
+                      isDarkMode ? "hover:bg-slate-800 text-slate-300" : "",
                     )}
                   >
                     <AlertCircle className="w-4 h-4 mr-2" />

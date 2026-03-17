@@ -1,7 +1,13 @@
 // components/gigs/AllGigs.tsx
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useCallback,
+  useRef,
+} from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -454,21 +460,22 @@ export const AllGigs = ({ user }: { user: any }) => {
     return getUserGigStatus(convertedGig, user?._id);
   };
   // Optimized saved/favorite maps
-  // Replace your existing useEffect with this:
+  const hasInitialized = useRef(false);
 
+  // Optimized saved/favorite maps - FIXED VERSION
   useEffect(() => {
+    // Skip if no gigs
+    if (allNewGigs.length === 0) return;
+
     console.log("🔄 [AllGigs] Syncing maps with new gigs", {
       allNewGigsCount: allNewGigs.length,
       savedMapSize: Object.keys(isSavedMap).length,
       favoriteMapSize: Object.keys(isFavoriteMap).length,
     });
 
-    // Only initialize if maps are empty
-    if (
-      Object.keys(isSavedMap).length === 0 &&
-      Object.keys(isFavoriteMap).length === 0
-    ) {
-      console.log("📝 [AllGigs] Initializing empty maps");
+    // First time initialization
+    if (!hasInitialized.current) {
+      console.log("📝 [AllGigs] Initializing maps");
       const savedMap: Record<string, boolean> = {};
       const favoriteMap: Record<string, boolean> = {};
 
@@ -479,34 +486,38 @@ export const AllGigs = ({ user }: { user: any }) => {
 
       setIsSavedMap(savedMap);
       setIsFavoriteMap(favoriteMap);
+      hasInitialized.current = true;
       return;
     }
 
     // Check for new gigs that aren't in our maps yet
-    const newGigs = allNewGigs.filter(
-      (gig) => !isSavedMap.hasOwnProperty(gig._id),
-    );
+    // Only run if the number of gigs changed
+    if (Object.keys(isSavedMap).length !== allNewGigs.length) {
+      const newGigs = allNewGigs.filter(
+        (gig) => !isSavedMap.hasOwnProperty(gig._id),
+      );
 
-    if (newGigs.length > 0) {
-      console.log("➕ [AllGigs] Adding new gigs to maps:", newGigs.length);
+      if (newGigs.length > 0) {
+        console.log("➕ [AllGigs] Adding new gigs to maps:", newGigs.length);
 
-      setIsSavedMap((prev) => {
-        const newMap = { ...prev };
-        newGigs.forEach((gig) => {
-          newMap[gig._id] = false;
+        setIsSavedMap((prev) => {
+          const newMap = { ...prev };
+          newGigs.forEach((gig) => {
+            newMap[gig._id] = false;
+          });
+          return newMap;
         });
-        return newMap;
-      });
 
-      setIsFavoriteMap((prev) => {
-        const newMap = { ...prev };
-        newGigs.forEach((gig) => {
-          newMap[gig._id] = false;
+        setIsFavoriteMap((prev) => {
+          const newMap = { ...prev };
+          newGigs.forEach((gig) => {
+            newMap[gig._id] = false;
+          });
+          return newMap;
         });
-        return newMap;
-      });
+      }
     }
-  }, [allNewGigs]);
+  }, [allNewGigs]); // ✅ Removed isSavedMap and isFavori
   // Filter gigs
   const filteredGigs = useMemo(() => {
     let result = allNewGigs.filter((gig) => {

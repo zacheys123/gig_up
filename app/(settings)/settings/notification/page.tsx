@@ -29,6 +29,7 @@ import {
   MessageCircle,
   Music,
   Info,
+  AlertCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FaComment } from "react-icons/fa";

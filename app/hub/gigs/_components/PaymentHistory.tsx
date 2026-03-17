@@ -489,7 +489,11 @@ export const PaymentHistory = ({ user, isDarkMode }: PaymentHistoryProps) => {
                 }
                 if (gig.musicianConfirmPayment || gig.clientConfirmPayment) {
                   return {
-                    label: isUserMusician ? "You Confirmed" : "They Confirmed",
+                    label: isUserMusician
+                      ? "You Confirmed"
+                      : gig.postedBy === user._id
+                        ? "You Confirmed"
+                        : "They Confirmed",
                     icon: CheckCircle,
                     color: "text-blue-500",
                     bg: isDarkMode ? "bg-blue-500/10" : "bg-blue-50",
