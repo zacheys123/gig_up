@@ -329,7 +329,7 @@ export const gigModel = defineTable({
     v.object({
       gigId: v.id("gigs"),
       verifiedAt: v.number(),
-      verifiedBy: v.id("users"),
+     verifiedBy: v.union(v.id("users"), v.literal("SYSTEM")),
       match: v.boolean(),
       extractedData: v.optional(
         v.object({

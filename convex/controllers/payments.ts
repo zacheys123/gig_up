@@ -187,7 +187,6 @@ export const confirmPayment = mutation({
         actionLabel: "Track Status",
       });
     }
-
     // Check if both confirmations now exist
     const updatedGig = await ctx.db.get(args.gigId);
     if (
