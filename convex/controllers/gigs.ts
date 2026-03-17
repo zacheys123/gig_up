@@ -3223,10 +3223,17 @@ export const getAllActiveGigs = query({
     cursor: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    // Get ALL active gigs (no filters except isActive)
+    const now = Date.now(); // Current timestamp
+    
+    // Get active gigs that haven't passed their date
     let query = ctx.db
       .query("gigs")
-      .filter((q) => q.eq(q.field("isActive"), true))
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("isActive"), true),
+          q.gte(q.field("date"), now) // Only future gigs
+        )
+      )
       .order("desc");
 
     // Optional limit for pagination

@@ -252,10 +252,50 @@ const TalentModal = ({
     );
   }, [searchQuery]);
 
-  // Fix 1: Update handleFieldChange to be more type-safe
+  // Add this inside your TalentModal component, before the return statement
+  const validateTalentField = useCallback(
+    (field: string, value: any): string => {
+      if (!value) {
+        if (field === "mcType") return "MC type is required";
+        if (field === "mcLanguages") return "At least one language is required";
+        if (field === "djGenre") return "At least one genre is required";
+        if (field === "djEquipment")
+          return "At least one equipment type is required";
+        if (field === "vocalistGenre") return "At least one genre is required";
+        return "";
+      }
+
+      // Handle array fields
+      if (Array.isArray(value)) {
+        if (field === "mcLanguages" && value.length === 0) {
+          return "At least one language is required";
+        }
+        if (field === "djGenre" && value.length === 0) {
+          return "At least one genre is required";
+        }
+        if (field === "djEquipment" && value.length === 0) {
+          return "At least one equipment type is required";
+        }
+        if (field === "vocalistGenre" && value.length === 0) {
+          return "At least one genre is required";
+        }
+      }
+
+      // Handle string fields
+      if (typeof value === "string") {
+        if (field === "mcType" && !value.trim()) {
+          return "MC type is required";
+        }
+      }
+
+      return "";
+    },
+    [],
+  );
+  // Update handleFieldChange to use internal validation
   const handleFieldChange = (field: keyof LocalGigInputs, value: any) => {
     setLocalData((prev) => ({ ...prev, [field]: value }));
-    const error = validateField(field, value);
+    const error = validateTalentField(field, value); // Use internal validation
     setLocalErrors((prev) => ({ ...prev, [field]: error }));
   };
 
@@ -398,7 +438,6 @@ const TalentModal = ({
   };
 
   const handleSubmit = () => {
-    // Check if talentType is valid
     if (!talentType) {
       console.error("Talent type is required");
       return;
@@ -407,19 +446,22 @@ const TalentModal = ({
     const newErrors: Record<string, string> = {};
 
     if (talentType === "mc") {
-      newErrors.mcType = validateField("mcType", localData.mcType || "");
-      newErrors.mcLanguages = validateField(
+      newErrors.mcType = validateTalentField("mcType", localData.mcType || "");
+      newErrors.mcLanguages = validateTalentField(
         "mcLanguages",
         localData.mcLanguages || [],
       );
     } else if (talentType === "dj") {
-      newErrors.djGenre = validateField("djGenre", localData.djGenre || []);
-      newErrors.djEquipment = validateField(
+      newErrors.djGenre = validateTalentField(
+        "djGenre",
+        localData.djGenre || [],
+      );
+      newErrors.djEquipment = validateTalentField(
         "djEquipment",
         localData.djEquipment || [],
       );
     } else if (talentType === "vocalist") {
-      newErrors.vocalistGenre = validateField(
+      newErrors.vocalistGenre = validateTalentField(
         "vocalistGenre",
         localData.vocalistGenre || [],
       );
