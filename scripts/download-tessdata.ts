@@ -4,9 +4,6 @@ import { createWorker, PSM } from "tesseract.js";
 import path from "path";
 import fs from "fs";
 
-// Define LANG_DIR at the top level
-const LANG_DIR = path.join(process.cwd(), "public", "tessdata");
-
 // Enhanced M-Pesa patterns
 const MPESA_PATTERNS = {
   transactionId:
@@ -34,24 +31,8 @@ const SUPPORTED_TYPES = [
   "image/heif",
 ];
 
-// Ensure language directory exists
-async function ensureLanguageFiles() {
-  const langFile = path.join(LANG_DIR, "eng.traineddata");
-  const langFileGz = path.join(LANG_DIR, "eng.traineddata.gz");
-
-  if (!fs.existsSync(LANG_DIR)) {
-    fs.mkdirSync(LANG_DIR, { recursive: true });
-    console.log("Created tessdata directory:", LANG_DIR);
-  }
-
-  if (!fs.existsSync(langFile) && !fs.existsSync(langFileGz)) {
-    console.log("Language file not found locally");
-    return false;
-  }
-
-  console.log("Language file found locally");
-  return LANG_DIR;
-}
+// Get the path to downloaded language files
+const LANG_DIR = path.join(process.cwd(), "public", "tessdata");
 
 async function validateAndFetchImage(imageFile: File) {
   try {
@@ -176,9 +157,6 @@ export async function POST(req: NextRequest) {
   const startTime = Date.now();
 
   try {
-    // Ensure language files exist (optional, can be removed if you want to rely on CDN fallback)
-    await ensureLanguageFiles();
-
     // Parse FormData
     let formData;
     try {
@@ -188,31 +166,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error:
-            "Invalid FormData - make sure you're sending a multipart/form-data request",
-          details:
-            formError instanceof Error ? formError.message : String(formError),
+          error: "Invalid FormData",
           code: "INVALID_FORMDATA",
         },
         { status: 400 },
       );
     }
-
-    // Log all fields in FormData for debugging
-    const formDataEntries: any = {};
-    for (const [key, value] of formData.entries()) {
-      if (value instanceof File) {
-        formDataEntries[key] = {
-          type: "File",
-          name: value.name,
-          size: value.size,
-          mimeType: value.type,
-        };
-      } else {
-        formDataEntries[key] = value;
-      }
-    }
-    console.log("FormData received:", JSON.stringify(formDataEntries, null, 2));
 
     // Get the image file from FormData
     const imageFile = formData.get("image") as File | null;
@@ -221,33 +180,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error:
-            "No image file provided in FormData. Expected field name 'image'",
-          receivedFields: Object.keys(Object.fromEntries(formData.entries())),
+          error: "No image file provided in FormData",
           code: "MISSING_IMAGE_FILE",
         },
         { status: 400 },
       );
     }
 
-    if (!(imageFile instanceof File)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "The 'image' field is not a valid file",
-          receivedType: typeof imageFile,
-          code: "INVALID_FILE_TYPE",
-        },
-        { status: 400 },
-      );
-    }
-
-    console.log("Processing OCR for image:", {
-      name: imageFile.name,
-      type: imageFile.type,
-      size: imageFile.size,
-      lastModified: new Date(imageFile.lastModified).toISOString(),
-    });
+    console.log(
+      "Processing OCR for image:",
+      imageFile.name,
+      "type:",
+      imageFile.type,
+      "size:",
+      imageFile.size,
+    );
 
     // Validate and process the image file
     let imageBuffer;
@@ -255,13 +202,11 @@ export async function POST(req: NextRequest) {
       const result = await validateAndFetchImage(imageFile);
       imageBuffer = result.buffer;
     } catch (error) {
-      console.error("Image validation failed:", error);
       return NextResponse.json(
         {
           success: false,
           error:
             error instanceof Error ? error.message : "Image validation failed",
-          details: error instanceof Error ? error.stack : String(error),
           code: "INVALID_IMAGE",
         },
         { status: 400 },
@@ -270,95 +215,40 @@ export async function POST(req: NextRequest) {
 
     console.log("Image validated, size:", imageBuffer.length, "bytes");
 
-    // Initialize worker
+    // Initialize worker with language and options
     console.log("Initializing Tesseract worker...");
-    let worker;
-    try {
-      // Check if language files exist locally, otherwise use CDN
-      const langPath = fs.existsSync(path.join(LANG_DIR, "eng.traineddata.gz"))
-        ? LANG_DIR
-        : "https://tessdata.projectnaptha.com/4.0.0";
 
-      worker = await createWorker({
-        langPath: langPath,
-        logger: (m) => {
-          if (process.env.NODE_ENV === "development") {
-            console.log("Tesseract progress:", m);
-          }
-        },
-        // Optional: specify core and worker paths for better reliability
-        corePath:
-          "https://cdn.jsdelivr.net/npm/tesseract.js-core@4.0.2/tesseract-core.wasm.js",
-        workerPath:
-          "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js",
-      });
+    // Create worker with language in options object
+    const worker = await createWorker({
+      langPath: LANG_DIR, // Use the downloaded language files
+      logger: (m) => {
+        if (process.env.NODE_ENV === "development") {
+          console.log("Tesseract:", m);
+        }
+      },
+      // You can also specify corePath and workerPath if needed
+      // corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@4.0.2/tesseract-core.wasm.js',
+      // workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js'
+    });
 
-      console.log("Loading English language...");
-      await worker.loadLanguage("eng");
-      await worker.initialize("eng");
+    // Load the English language
+    await worker.loadLanguage("eng");
+    await worker.initialize("eng");
 
-      console.log("Setting parameters...");
-      await worker.setParameters({
-        tessedit_char_whitelist:
-          "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz/:.,- ",
-        tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
-        preserve_interword_spaces: "1",
-      });
-    } catch (workerError) {
-      console.error("Failed to initialize Tesseract worker:", workerError);
-      if (worker) await worker.terminate().catch(() => {});
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Failed to initialize OCR engine",
-          details:
-            workerError instanceof Error
-              ? workerError.message
-              : String(workerError),
-          code: "WORKER_INIT_FAILED",
-        },
-        { status: 500 },
-      );
-    }
+    // Set parameters for better accuracy with screenshots
+    await worker.setParameters({
+      tessedit_char_whitelist:
+        "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz/:.,- ",
+      tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
+      preserve_interword_spaces: "1",
+    });
 
-    // Recognize text
-    console.log("Running OCR recognition...");
-    let data;
-    try {
-      const result = await worker.recognize(imageBuffer);
-      data = result.data;
-      console.log("OCR completed successfully");
-    } catch (recognizeError) {
-      console.error("OCR recognition failed:", recognizeError);
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Failed to recognize text in image",
-          details:
-            recognizeError instanceof Error
-              ? recognizeError.message
-              : String(recognizeError),
-          code: "RECOGNITION_FAILED",
-        },
-        { status: 500 },
-      );
-    } finally {
-      await worker.terminate();
-    }
+    console.log("Running OCR...");
+    const { data } = await worker.recognize(imageBuffer);
+    await worker.terminate();
 
-    console.log("OCR confidence:", data.confidence);
-    console.log("Extracted text length:", data.text.length);
+    console.log("OCR complete, confidence:", data.confidence);
     console.log("Extracted text preview:", data.text.substring(0, 200));
-
-    if (!data.text || data.text.trim().length === 0) {
-      return NextResponse.json({
-        success: false,
-        error: "No text could be extracted from the image",
-        code: "NO_TEXT_EXTRACTED",
-        message:
-          "The image appears to contain no readable text. Please ensure it's a clear screenshot of an M-Pesa message.",
-      });
-    }
 
     const extractedData = extractStructuredData(data.text);
 
@@ -390,35 +280,34 @@ export async function POST(req: NextRequest) {
     };
 
     if (!isSuccessful) {
-      console.log("Low confidence extraction:", response);
       return NextResponse.json({
         ...response,
         message:
           "Could not reliably extract payment details. Please ensure the screenshot shows the transaction clearly.",
         suggestedAction:
-          "Try uploading a clearer screenshot showing the full M-Pesa message with transaction ID, amount, and date.",
+          "Try uploading a clearer screenshot showing the full M-Pesa message.",
       });
     }
 
-    console.log("Successful extraction:", response);
     return NextResponse.json(response);
   } catch (error) {
-    console.error("OCR extraction failed with unexpected error:", error);
+    console.error("OCR extraction failed:", error);
 
     const errorMessage =
       error instanceof Error ? error.message : "OCR processing failed";
-    const errorStack = error instanceof Error ? error.stack : undefined;
+    const isTimeout =
+      errorMessage.includes("timeout") || errorMessage.includes("TIMEOUT");
 
     return NextResponse.json(
       {
         success: false,
         error: errorMessage,
-        details: errorStack,
-        code: "UNEXPECTED_ERROR",
-        message:
-          "An unexpected error occurred during OCR processing. Please try again.",
+        code: isTimeout ? "TIMEOUT" : "PROCESSING_ERROR",
+        message: isTimeout
+          ? "Processing took too long. Please try again with a smaller image."
+          : "Failed to process the image. Please try again.",
       },
-      { status: 500 },
+      { status: isTimeout ? 408 : 500 },
     );
   }
 }

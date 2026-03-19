@@ -1,6 +1,7 @@
 // components/payments/PaymentConfirmation.tsx
+
 import React, { useEffect, useState } from "react";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,10 +25,9 @@ import {
   Image,
   RefreshCw,
 } from "lucide-react";
-
 import { motion, AnimatePresence } from "framer-motion";
 import { ExtractedDataType } from "@/convex/payment";
-import { useQuery } from "convex/react";
+
 interface PaymentConfirmationProps {
   gigId: string;
   userRole: "musician" | "client";
@@ -36,6 +36,11 @@ interface PaymentConfirmationProps {
   onConfirmed: () => void;
   isDarkMode: boolean;
 }
+
+// Helper function for conditional classes
+const cn = (...classes: any[]) => {
+  return classes.filter(Boolean).join(" ");
+};
 
 export function PaymentConfirmation({
   gigId,
@@ -56,32 +61,10 @@ export function PaymentConfirmation({
   const [notes, setNotes] = useState("");
   const [ocrResult, setOcrResult] = useState<ExtractedDataType | null>(null);
   const [step, setStep] = useState<"upload" | "review">("upload");
+  const [ocrError, setOcrError] = useState<string | null>(null);
 
   const confirmPayment = useMutation(api.controllers.payments.confirmPayment);
   const generateUploadUrl = useMutation(api.upload.generateUploadUrl);
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please upload an image file");
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("File size must be less than 5MB");
-      return;
-    }
-
-    setScreenshot(file);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-    await processOCR(file);
-  };
 
   // Add payment status query to check if already confirmed
   const paymentStatus = useQuery(api.controllers.payments.getGigPaymentStatus, {
@@ -103,150 +86,167 @@ export function PaymentConfirmation({
     }
   }, [paymentStatus]);
 
-  // Add this loading UI before the already confirmed check
-  if (isChecking) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <div className="relative">
-          <div
-            className={cn(
-              "w-12 h-12 border-4 rounded-full animate-spin",
-              isDarkMode
-                ? "border-blue-800/30 border-t-blue-500"
-                : "border-blue-200 border-t-blue-600",
-            )}
-          />
-        </div>
-      </div>
-    );
-  }
-  // If already confirmed, show different UI
-  if (hasUserConfirmed) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className={cn(
-          "relative overflow-hidden rounded-2xl border p-8 text-center",
-          isDarkMode
-            ? "bg-slate-900/90 border-slate-800"
-            : "bg-white/90 border-slate-200",
-          "backdrop-blur-xl shadow-2xl",
-        )}
-      >
-        {/* Background Decorations */}
-        <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 via-transparent to-emerald-500/5 pointer-events-none" />
-        <div className="absolute -top-24 -right-24 w-48 h-48 bg-green-500/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl" />
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-        <div className="relative">
-          <div
-            className={cn(
-              "w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6",
-              isDarkMode ? "bg-green-500/20" : "bg-green-100",
-            )}
-          >
-            <CheckCircle
-              className={cn(
-                "w-10 h-10",
-                isDarkMode ? "text-green-400" : "text-green-600",
-              )}
-            />
-          </div>
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
+    }
 
-          <h3
-            className={cn(
-              "text-2xl font-bold mb-3",
-              isDarkMode ? "text-white" : "text-slate-900",
-            )}
-          >
-            Already Confirmed
-          </h3>
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File size must be less than 5MB");
+      return;
+    }
 
-          <p
-            className={cn(
-              "text-base mb-6 max-w-md mx-auto",
-              isDarkMode ? "text-slate-400" : "text-slate-500",
-            )}
-          >
-            You have already confirmed payment for this gig.
-            {paymentStatus?.verified && " It has been verified successfully."}
-            {paymentStatus?.paymentStatus === "disputed" &&
-              " It is currently under dispute."}
-          </p>
+    setScreenshot(file);
+    setOcrError(null);
 
-          <div className="flex gap-3 justify-center">
-            <Button
-              variant="outline"
-              onClick={() =>
-                (window.location.href = `/hub/gigs?tab=payments&gigId=${gigId}`)
-              }
-              className={cn(
-                "px-6",
-                isDarkMode
-                  ? "border-slate-700 hover:bg-slate-800"
-                  : "border-slate-200 hover:bg-slate-100",
-              )}
-            >
-              View Status
-            </Button>
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
 
-            {paymentStatus?.paymentStatus === "disputed" && (
-              <Button
-                variant="destructive"
-                onClick={() =>
-                  (window.location.href = `/hub/gigs/${gigId}/dispute`)
-                }
-                className="px-6"
-              >
-                View Dispute
-              </Button>
-            )}
-          </div>
-        </div>
-      </motion.div>
-    );
-  }
+    await processOCR(file);
+  };
+
   const processOCR = async (file: File) => {
     setOcrProcessing(true);
+    setOcrError(null);
+
     try {
+      console.log(
+        "Starting OCR for file:",
+        file.name,
+        "size:",
+        file.size,
+        "type:",
+        file.type,
+      );
+
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("image", file);
+
+      console.log("Sending request to /api/ocr/extract...");
 
       const response = await fetch("/api/ocr/extract", {
         method: "POST",
         body: formData,
       });
 
-      if (!response.ok) throw new Error("OCR processing failed");
-      const data = await response.json();
+      console.log("Response status:", response.status, response.statusText);
 
-      const result: ExtractedDataType = {
-        transactionId: data.transactionId || null,
-        amount: data.amount || undefined,
-        date: data.date || undefined,
-        time: data.time || undefined,
-        phoneNumber: data.phoneNumber || undefined,
-        sender: data.sender || undefined,
-        receiver: data.receiver || undefined,
-        fullText: data.fullText || undefined,
-        confidence: data.confidence || 0,
-      };
+      // Get the response text first for debugging
+      const responseText = await response.text();
+      console.log("Raw response text:", responseText.substring(0, 500));
 
-      setOcrResult(result);
-
-      if (result.confidence >= 70 && result.amount) {
-        setAmount(result.amount.toString());
-        toast.success(`Amount detected: KES ${result.amount}`);
-      } else if (result.amount) {
-        toast.warning(`Low confidence (${result.confidence}%). Please verify`);
+      // Try to parse as JSON
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("Failed to parse response as JSON:", parseError);
+        console.error("Raw response:", responseText);
+        throw new Error(
+          `Invalid JSON response from server: ${responseText.substring(0, 100)}`,
+        );
       }
 
-      setStep("review");
+      if (!response.ok) {
+        console.error("OCR API error:", data);
+        throw new Error(
+          data.error ||
+            data.message ||
+            `OCR failed with status ${response.status}`,
+        );
+      }
+
+      if (!data.success) {
+        console.warn("OCR extraction low confidence:", data);
+
+        // Still set the data but show warning
+        if (data.data) {
+          setOcrResult({
+            transactionId: data.data.transactionId,
+            amount: data.data.amount,
+            date: data.data.date,
+            time: data.data.time,
+            phoneNumber: data.data.phoneNumber,
+            sender: data.data.sender,
+            receiver: data.data.receiver,
+            fullText: data.data.fullText,
+            confidence: data.confidence?.overall || 0,
+          });
+
+          // Auto-fill amount if detected
+          if (data.data.amount) {
+            setAmount(data.data.amount.toString());
+          }
+
+          setStep("review");
+          toast.warning(
+            data.message ||
+              "Low confidence detection - please verify all details",
+          );
+        } else {
+          throw new Error(data.message || "Failed to extract payment details");
+        }
+      } else {
+        console.log("OCR successful:", data);
+
+        // Set OCR result
+        setOcrResult({
+          transactionId: data.data.transactionId,
+          amount: data.data.amount,
+          date: data.data.date,
+          time: data.data.time,
+          phoneNumber: data.data.phoneNumber,
+          sender: data.data.sender,
+          receiver: data.data.receiver,
+          fullText: data.data.fullText,
+          confidence: data.confidence?.overall || 0,
+        });
+
+        // Auto-fill amount if detected
+        if (data.data.amount) {
+          setAmount(data.data.amount.toString());
+        }
+
+        setStep("review");
+        toast.success("Payment details extracted successfully!");
+      }
     } catch (error) {
-      console.error("OCR error:", error);
-      toast.error("Failed to process image. Please enter manually.");
-      setStep("review");
+      console.error("OCR processing error details:", {
+        error:
+          error instanceof Error
+            ? {
+                message: error.message,
+                stack: error.stack,
+                name: error.name,
+              }
+            : error,
+        file: file
+          ? {
+              name: file.name,
+              size: file.size,
+              type: file.type,
+            }
+          : null,
+      });
+
+      setOcrError(
+        error instanceof Error ? error.message : "Failed to process receipt",
+      );
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to process receipt image. Please try again.",
+      );
+
+      // Don't move to review step on error
+      setStep("upload");
     } finally {
       setOcrProcessing(false);
     }
@@ -334,12 +334,119 @@ export function PaymentConfirmation({
     setOcrResult(null);
     setStep("upload");
     setAmount("");
+    setOcrError(null);
   };
 
   const userLabel =
     userRole === "musician"
       ? "Confirm Payment Received"
       : "Confirm Payment Sent";
+
+  // Add this loading UI before the already confirmed check
+  if (isChecking) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <div className="relative">
+          <div
+            className={cn(
+              "w-12 h-12 border-4 rounded-full animate-spin",
+              isDarkMode
+                ? "border-blue-800/30 border-t-blue-500"
+                : "border-blue-200 border-t-blue-600",
+            )}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // If already confirmed, show different UI
+  if (hasUserConfirmed) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={cn(
+          "relative overflow-hidden rounded-2xl border p-8 text-center",
+          isDarkMode
+            ? "bg-slate-900/90 border-slate-800"
+            : "bg-white/90 border-slate-200",
+          "backdrop-blur-xl shadow-2xl",
+        )}
+      >
+        {/* Background Decorations */}
+        <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 via-transparent to-emerald-500/5 pointer-events-none" />
+        <div className="absolute -top-24 -right-24 w-48 h-48 bg-green-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl" />
+
+        <div className="relative">
+          <div
+            className={cn(
+              "w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6",
+              isDarkMode ? "bg-green-500/20" : "bg-green-100",
+            )}
+          >
+            <CheckCircle
+              className={cn(
+                "w-10 h-10",
+                isDarkMode ? "text-green-400" : "text-green-600",
+              )}
+            />
+          </div>
+
+          <h3
+            className={cn(
+              "text-2xl font-bold mb-3",
+              isDarkMode ? "text-white" : "text-slate-900",
+            )}
+          >
+            Already Confirmed
+          </h3>
+
+          <p
+            className={cn(
+              "text-base mb-6 max-w-md mx-auto",
+              isDarkMode ? "text-slate-400" : "text-slate-500",
+            )}
+          >
+            You have already confirmed payment for this gig.
+            {paymentStatus?.verified && " It has been verified successfully."}
+            {paymentStatus?.paymentStatus === "disputed" &&
+              " It is currently under dispute."}
+          </p>
+
+          <div className="flex gap-3 justify-center">
+            <Button
+              variant="outline"
+              onClick={() =>
+                (window.location.href = `/hub/gigs?tab=payments&gigId=${gigId}`)
+              }
+              className={cn(
+                "px-6",
+                isDarkMode
+                  ? "border-slate-700 hover:bg-slate-800"
+                  : "border-slate-200 hover:bg-slate-100",
+              )}
+            >
+              View Status
+            </Button>
+
+            {paymentStatus?.paymentStatus === "disputed" && (
+              <Button
+                variant="destructive"
+                onClick={() =>
+                  (window.location.href = `/hub/gigs/${gigId}/dispute`)
+                }
+                className="px-6"
+              >
+                View Dispute
+              </Button>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
@@ -468,6 +575,21 @@ export function PaymentConfirmation({
         </motion.div>
       )}
 
+      {/* OCR Error Display */}
+      {ocrError && (
+        <div className="relative mb-6 p-4 rounded-xl border border-red-500/20 bg-red-500/10">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-500" />
+            <div>
+              <p className="text-sm font-medium text-red-600 dark:text-red-400">
+                OCR Failed
+              </p>
+              <p className="text-sm text-red-500/80">{ocrError}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <AnimatePresence mode="wait">
         {step === "upload" ? (
           <motion.div
@@ -580,7 +702,7 @@ export function PaymentConfirmation({
             </div>
 
             {/* Preview */}
-            {preview && (
+            {preview && !ocrProcessing && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -650,7 +772,7 @@ export function PaymentConfirmation({
                       getConfidenceColor(ocrResult.confidence),
                     )}
                   >
-                    {ocrResult.confidence}% Confidence
+                    {Math.round(ocrResult.confidence)}% Confidence
                   </span>
                 </div>
 
@@ -929,8 +1051,4 @@ export function PaymentConfirmation({
       </div>
     </motion.div>
   );
-}
-
-function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(" ");
 }
