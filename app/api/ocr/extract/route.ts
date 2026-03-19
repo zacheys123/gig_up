@@ -4,8 +4,14 @@ import { createWorker, PSM } from "tesseract.js";
 import path from "path";
 import fs from "fs";
 
-// Define LANG_DIR at the top level
-const LANG_DIR = path.join(process.cwd(), "public", "tessdata");
+// Define paths at the top level
+const PROJECT_ROOT = process.cwd(); // This will be /home/zackblackhat/Desktop/gig_up
+const LANG_DIR = path.join(PROJECT_ROOT, "public", "tessdata");
+const TESSERACT_MODULE_PATH = path.join(
+  PROJECT_ROOT,
+  "node_modules",
+  "tesseract.js",
+);
 
 // Enhanced M-Pesa patterns
 const MPESA_PATTERNS = {
@@ -37,6 +43,7 @@ const SUPPORTED_TYPES = [
 // Check if language files exist
 function checkLanguageFiles() {
   console.log("Checking language files in:", LANG_DIR);
+  console.log("Project root:", PROJECT_ROOT);
 
   if (!fs.existsSync(LANG_DIR)) {
     console.log("Language directory does not exist");
@@ -177,6 +184,9 @@ export async function POST(req: NextRequest) {
   try {
     // Check language files at startup
     console.log("=== OCR API Started ===");
+    console.log("Current working directory:", PROJECT_ROOT);
+    console.log("Tesseract module path:", TESSERACT_MODULE_PATH);
+
     const hasLocalFiles = checkLanguageFiles();
 
     // Parse FormData
@@ -270,14 +280,29 @@ export async function POST(req: NextRequest) {
 
     console.log("Image validated, size:", imageBuffer.length, "bytes");
 
-    // Initialize worker with simpler configuration first
-    console.log("Initializing Tesseract worker with simple config...");
+    // Initialize worker with explicit paths
+    console.log("Initializing Tesseract worker with explicit paths...");
     let worker;
     try {
-      // Try the simplest possible configuration first
-      console.log("Attempting to create worker with defaults...");
-      worker = await createWorker();
-      console.log("Worker created successfully");
+      // Use CDN paths instead of local files to avoid path issues
+      console.log("Using CDN paths for reliability...");
+
+      worker = await createWorker({
+        langPath: hasLocalFiles
+          ? LANG_DIR
+          : "https://tessdata.projectnaptha.com/4.0.0",
+        corePath:
+          "https://cdn.jsdelivr.net/npm/tesseract.js-core@4.0.2/tesseract-core.wasm.js",
+        workerPath:
+          "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js",
+        logger: (m) => {
+          if (process.env.NODE_ENV === "development") {
+            console.log("Tesseract CDN:", m);
+          }
+        },
+      });
+
+      console.log("Worker created successfully with CDN");
 
       console.log("Loading English language...");
       await worker.loadLanguage("eng");
@@ -296,59 +321,21 @@ export async function POST(req: NextRequest) {
       });
       console.log("Parameters set successfully");
     } catch (workerError) {
-      console.error(
-        "Failed to initialize Tesseract worker with simple config:",
-        workerError,
+      console.error("Failed to initialize Tesseract worker:", workerError);
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Failed to initialize OCR engine",
+          details:
+            workerError instanceof Error
+              ? workerError.message
+              : String(workerError),
+          code: "WORKER_INIT_FAILED",
+          message: "Could not start OCR engine. Please try again later.",
+        },
+        { status: 500 },
       );
-
-      // If simple config fails, try with explicit paths
-      console.log("Attempting with explicit CDN paths...");
-      try {
-        if (worker) await worker.terminate().catch(() => {});
-
-        worker = await createWorker({
-          langPath: "https://tessdata.projectnaptha.com/4.0.0",
-          corePath:
-            "https://cdn.jsdelivr.net/npm/tesseract.js-core@4.0.2/tesseract-core.wasm.js",
-          workerPath:
-            "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js",
-          logger: (m) => console.log("Tesseract CDN:", m),
-        });
-
-        console.log("Worker created with CDN paths");
-
-        console.log("Loading English language from CDN...");
-        await worker.loadLanguage("eng");
-        await worker.initialize("eng");
-
-        console.log("Setting parameters...");
-        await worker.setParameters({
-          tessedit_char_whitelist:
-            "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz/:.,- ",
-          tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
-          preserve_interword_spaces: "1",
-        });
-      } catch (cdnError) {
-        console.error("CDN fallback also failed:", cdnError);
-
-        return NextResponse.json(
-          {
-            success: false,
-            error: "Failed to initialize OCR engine",
-            details: {
-              simple:
-                workerError instanceof Error
-                  ? workerError.message
-                  : String(workerError),
-              cdn:
-                cdnError instanceof Error ? cdnError.message : String(cdnError),
-            },
-            code: "WORKER_INIT_FAILED",
-            message: "Could not start OCR engine. Please try again later.",
-          },
-          { status: 500 },
-        );
-      }
     }
 
     // Recognize text

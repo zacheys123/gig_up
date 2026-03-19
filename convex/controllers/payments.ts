@@ -53,7 +53,6 @@ async function sendGigMail(
 // Main payment confirmation mutation
 // convex/controllers/payments.ts
 
-// Main payment confirmation mutation
 export const confirmPayment = mutation({
   args: {
     gigId: v.id("gigs"),
@@ -98,7 +97,7 @@ export const confirmPayment = mutation({
       throw new Error("You are not the client for this gig");
     }
 
-    // Create confirmation object
+    // Create confirmation object (matches your schema exactly)
     const confirmation = {
       gigId: args.gigId,
       confirmed: args.confirmed,
@@ -107,13 +106,51 @@ export const confirmPayment = mutation({
       paymentMethod: args.paymentMethod,
       screenshot: args.screenshot,
       notes: args.notes,
-      extractedData: args.extractedData,
+      extractedData: args.extractedData
+        ? {
+            transactionId: args.extractedData.transactionId ?? null,
+            amount: args.extractedData.amount,
+            date: args.extractedData.date,
+            time: args.extractedData.time,
+            phoneNumber: args.extractedData.phoneNumber,
+            sender: args.extractedData.sender,
+            receiver: args.extractedData.receiver,
+            fullText: args.extractedData.fullText,
+            confidence: args.extractedData.confidence,
+          }
+        : undefined,
+    };
+
+    // Add to booking history for confirmation
+    const confirmationHistoryEntry = {
+      entryId: `confirm-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+      timestamp: Date.now(),
+      userId: currentUser._id,
+      userRole: args.role,
+      isBandRole: false,
+      status: "confirmed" as const,
+      gigType: gig.isClientBand ? ("band" as const) : ("regular" as const),
+      proposedPrice: args.amount,
+      agreedPrice: args.amount,
+      currency: gig.currency || "KES",
+      actionBy: currentUser._id,
+      notes: `Payment confirmed via ${args.paymentMethod}${args.extractedData ? " with OCR" : " manually"}`,
+      metadata: {
+        paymentMethod: args.paymentMethod,
+        hasOcr: !!args.extractedData,
+        ocrConfidence: args.extractedData?.confidence,
+        transactionId: args.extractedData?.transactionId,
+      },
     };
 
     // Update the gig with confirmation
     if (args.role === "musician") {
       await ctx.db.patch(args.gigId, {
         musicianConfirmPayment: confirmation,
+        bookingHistory: [
+          ...(gig.bookingHistory || []),
+          confirmationHistoryEntry,
+        ],
       });
 
       // Send mail to client
@@ -151,6 +188,10 @@ export const confirmPayment = mutation({
       // Client confirmation
       await ctx.db.patch(args.gigId, {
         clientConfirmPayment: confirmation,
+        bookingHistory: [
+          ...(gig.bookingHistory || []),
+          confirmationHistoryEntry,
+        ],
       });
 
       // Send mail to musician
@@ -187,6 +228,7 @@ export const confirmPayment = mutation({
         actionLabel: "Track Status",
       });
     }
+
     // Check if both confirmations now exist
     const updatedGig = await ctx.db.get(args.gigId);
     if (
@@ -200,75 +242,297 @@ export const confirmPayment = mutation({
       // 1. Compare amounts (always required)
       const amountMatch = musicianConfirm.amount === clientConfirm.amount;
 
-      // 2. Compare transaction IDs - more flexible for manual entry
+      // 2. Compare transaction IDs with fraud detection
       const musicianTx = musicianConfirm.extractedData?.transactionId;
       const clientTx = clientConfirm.extractedData?.transactionId;
 
-      // Transaction IDs match if:
-      // - Both exist and are equal, OR
-      // - At least one is missing (manual entry) - we'll rely on amount match
-      // - Both are missing (no OCR used)
-      const txMatch =
-        // If both have transaction IDs, they must match
-        musicianTx && clientTx
-          ? musicianTx === clientTx
-          : // If one or both are missing, don't fail the match based on transaction ID
-            true;
+      // Track who used OCR vs manual entry
+      const musicianUsedOCR = !!musicianConfirm.extractedData;
+      const clientUsedOCR = !!clientConfirm.extractedData;
 
-      // 3. Check confidence thresholds - only if OCR data exists
-      const musicianConfidence = musicianConfirm.extractedData?.confidence;
-      const clientConfidence = clientConfirm.extractedData?.confidence;
+      let txMatch = true;
+      let fraudRisk: "none" | "low" | "medium" | "high" | "critical" = "none";
 
-      // Only enforce confidence check if BOTH users used OCR
-      // If either user entered manually (no extractedData), skip confidence check
-      const confidenceOk =
-        musicianConfidence && clientConfidence
-          ? musicianConfidence >= 70 && clientConfidence >= 70
-          : true; // Skip confidence check if manual entry
-
-      // 4. Final match determination
-      // Amount must always match
-      // Transaction ID and confidence are flexible for manual entry
-      const match = amountMatch && txMatch && confidenceOk;
-
-      // Build reason for mismatch - more descriptive
-      let reason = "";
-      if (!amountMatch) reason += "Amount mismatch. ";
-      if (musicianTx && clientTx && musicianTx !== clientTx)
-        reason += "Transaction ID mismatch. ";
-      if (
-        musicianConfidence &&
-        clientConfidence &&
-        (musicianConfidence < 70 || clientConfidence < 70)
-      )
-        reason += "Low OCR confidence. ";
-
-      // If only one has transaction ID, add a note
-      if ((musicianTx && !clientTx) || (!musicianTx && clientTx)) {
-        reason += "One party entered transaction ID manually. ";
+      // Case 1: Both used OCR - must match exactly
+      if (musicianUsedOCR && clientUsedOCR) {
+        txMatch = musicianTx === clientTx;
+        if (!txMatch) {
+          fraudRisk = "critical";
+        } else {
+          fraudRisk = "none";
+        }
       }
 
-      // Update payment verification
-      // Note: You'll need to fix the "SYSTEM" issue separately
+      // Case 2: One used OCR, one manual entry
+      else if (musicianUsedOCR || clientUsedOCR) {
+        const ocrTx = musicianUsedOCR ? musicianTx : clientTx;
+        const manualTx = musicianUsedOCR ? clientTx : musicianTx;
+
+        // If OCR extracted a transaction ID but manual entry is different/empty
+        if (ocrTx && manualTx && ocrTx !== manualTx) {
+          txMatch = false;
+          fraudRisk = "critical"; // Someone is lying about transaction ID
+        } else if (ocrTx && !manualTx) {
+          // OCR user provided ID, manual user didn't - suspicious but not conclusive
+          txMatch = true;
+          fraudRisk = "medium";
+        } else if (!ocrTx && manualTx) {
+          // OCR failed but manual provided ID - possible, flag for review
+          txMatch = true;
+          fraudRisk = "medium";
+        } else {
+          txMatch = true;
+          fraudRisk = "low";
+        }
+      }
+
+      // Case 3: Both manual - rely on amount match only, but flag for review
+      else {
+        txMatch = true;
+        fraudRisk = "medium"; // Flag for manual review
+      }
+
+      // 3. Check confidence thresholds
+      const musicianConfidence = musicianConfirm.extractedData?.confidence || 0;
+      const clientConfidence = clientConfirm.extractedData?.confidence || 0;
+
+      // If OCR was used but confidence is low, flag it
+      const lowConfidence =
+        (musicianUsedOCR && musicianConfidence < 70) ||
+        (clientUsedOCR && clientConfidence < 70);
+
+      // 4. Final match determination with fraud prevention
+      let match = false;
+      let disputeReason = "";
+      let disputeLevel: "none" | "review" | "standard" | "critical" = "none";
+
+      // Amount must ALWAYS match - this is non-negotiable
+      if (!amountMatch) {
+        disputeReason = "Amount mismatch - potential fraud";
+        disputeLevel = "critical";
+      }
+      // If transaction IDs don't match and both used OCR - definite fraud
+      else if (musicianUsedOCR && clientUsedOCR && musicianTx !== clientTx) {
+        disputeReason = "Transaction ID mismatch - potential fraud";
+        disputeLevel = "critical";
+      }
+      // If one OCR, one manual with different IDs - likely fraud
+      else if ((musicianUsedOCR || clientUsedOCR) && !txMatch) {
+        disputeReason = "Transaction ID discrepancy - possible fraud";
+        disputeLevel = "critical";
+      }
+      // Amount matches, but we have medium risk factors
+      else if (amountMatch) {
+        if (fraudRisk === "medium" || lowConfidence) {
+          // Still mark as verified but flag for review
+          match = true;
+          disputeReason = "Verified with manual entry - will be reviewed";
+          disputeLevel = "review";
+        } else if (fraudRisk === "low") {
+          match = true;
+          disputeReason = "Verified with partial data - will be monitored";
+          disputeLevel = "review";
+        } else {
+          match = true;
+          disputeReason = "Payment verified automatically";
+          disputeLevel = "none";
+        }
+      }
+
+      // Build detailed notes
+      const verificationNotes = {
+        reason: disputeReason,
+        amountMatch,
+        txMatch,
+        fraudRisk,
+        lowConfidence,
+        ocrUsage: {
+          musician: musicianUsedOCR,
+          client: clientUsedOCR,
+        },
+        confidence: {
+          musician: musicianConfidence,
+          client: clientConfidence,
+        },
+        transactionIds: {
+          musician: musicianTx,
+          client: clientTx,
+        },
+        amounts: {
+          musician: musicianConfirm.amount,
+          client: clientConfirm.amount,
+        },
+        timestamp: Date.now(),
+      };
+
+      // Create verification history entry
+      const verificationHistoryEntry = {
+        entryId: `verify-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        timestamp: Date.now(),
+        userId: "SYSTEM" as any, // System action
+        userRole: "system",
+        isBandRole: false,
+        status: match ? ("completed" as const) : ("cancelled" as const),
+        gigType: gig.isClientBand ? ("band" as const) : ("regular" as const),
+        proposedPrice: musicianConfirm.amount,
+        agreedPrice: clientConfirm.amount,
+        currency: gig.currency || "KES",
+        actionBy: "SYSTEM" as any,
+        notes: disputeReason,
+        reason: !match ? disputeReason : undefined,
+        metadata: verificationNotes,
+      };
+
+      // Update payment verification with appropriate status
       await ctx.db.patch(args.gigId, {
         paymentVerification: {
           gigId: args.gigId,
           verifiedAt: Date.now(),
-          verifiedBy: "SYSTEM" as any, // Fix this separately
+          verifiedBy: "SYSTEM", // Your schema allows this!
           match: match,
-          notes: match
-            ? "Payment verified automatically"
-            : reason || "Payment details mismatch",
+          notes: JSON.stringify(verificationNotes),
           ocrConfidence: {
-            musician: musicianConfidence || 0,
-            client: clientConfidence || 0,
+            musician: musicianConfidence,
+            client: clientConfidence,
           },
         },
         paymentStatus: match ? "verified_paid" : "disputed",
+        bookingHistory: [
+          ...(updatedGig.bookingHistory || []),
+          verificationHistoryEntry,
+        ],
       });
 
-      // ========== HANDLE MATCH ==========
-      if (match) {
+      // ========== HANDLE DISPUTES ==========
+      if (!match) {
+        // Update musician stats for dispute
+        if (gig.bookedBy) {
+          const musician = await ctx.db.get(gig.bookedBy);
+          await ctx.db.patch(gig.bookedBy, {
+            disputesCount: (musician?.disputesCount || 0) + 1,
+            // If critical fraud detected, penalize trust score
+            ...(disputeLevel === "critical" && {
+              trustScore: Math.max(0, (musician?.trustScore || 100) - 20),
+              warnings: [
+                ...(musician?.warnings || []),
+                {
+                  warning: "Critical payment dispute - transaction ID mismatch",
+                  adminId: "SYSTEM",
+                  timestamp: Date.now(),
+                  acknowledged: false,
+                },
+              ],
+            }),
+          });
+        }
+
+        // Update client stats for dispute
+        const client = await ctx.db.get(gig.postedBy);
+        await ctx.db.patch(gig.postedBy, {
+          disputesCount: (client?.disputesCount || 0) + 1,
+          ...(disputeLevel === "critical" && {
+            trustScore: Math.max(0, (client?.trustScore || 100) - 20),
+            warnings: [
+              ...(client?.warnings || []),
+              {
+                warning: "Critical payment dispute - transaction ID mismatch",
+                adminId: "SYSTEM",
+                timestamp: Date.now(),
+                acknowledged: false,
+              },
+            ],
+          }),
+        });
+
+        // Send dispute emails with appropriate severity
+        const disputeMessage =
+          disputeLevel === "critical"
+            ? `🚨 URGENT: Potential fraud detected for ${gig.title}. Our team will investigate immediately.`
+            : `⚠️ Payment dispute for ${gig.title}. Our team will review.`;
+
+        // Send to musician
+        if (gig.bookedBy) {
+          await sendGigMail(ctx, {
+            userId: gig.bookedBy,
+            gigId: args.gigId,
+            type: "payment_dispute",
+            subject:
+              disputeLevel === "critical"
+                ? "🚨 URGENT: Payment Fraud Alert"
+                : "⚠️ Payment Dispute",
+            message: disputeMessage,
+            amount: musicianConfirm.amount,
+            transactionId: musicianTx,
+            extractedData: musicianConfirm.extractedData,
+            requiresAction: true,
+            actionUrl: `/hub/gigs/${args.gigId}/dispute`,
+            actionLabel: "View Dispute",
+            metadata: verificationNotes,
+          });
+        }
+
+        // Send to client
+        await sendGigMail(ctx, {
+          userId: gig.postedBy,
+          gigId: args.gigId,
+          type: "payment_dispute",
+          subject:
+            disputeLevel === "critical"
+              ? "🚨 URGENT: Payment Fraud Alert"
+              : "⚠️ Payment Dispute",
+          message: disputeMessage,
+          amount: clientConfirm.amount,
+          transactionId: clientTx,
+          extractedData: clientConfirm.extractedData,
+          requiresAction: true,
+          actionUrl: `/hub/gigs/${args.gigId}/dispute`,
+          actionLabel: "View Dispute",
+          metadata: verificationNotes,
+        });
+      }
+
+      // ========== HANDLE REVIEW (Verified but flagged) ==========
+      else if (disputeLevel === "review") {
+        // Verified but flagged for review - don't penalize but log for admin review
+        console.log("Payment verified with manual entry - flag for review:", {
+          gigId: args.gigId,
+          verificationNotes,
+        });
+
+        // Send verification emails with note about manual review
+        if (gig.bookedBy) {
+          await sendGigMail(ctx, {
+            userId: gig.bookedBy,
+            gigId: args.gigId,
+            type: "payment_verified",
+            subject: "✅ Payment Verified (Manual Review)",
+            message: `Payment of KES ${musicianConfirm.amount} for ${gig.title} has been verified. Note: Manual entry was used and will be reviewed by our team.`,
+            amount: musicianConfirm.amount,
+            transactionId: musicianTx,
+            extractedData: musicianConfirm.extractedData,
+            actionUrl: `/hub/gigs/${args.gigId}`,
+            actionLabel: "View Gig",
+            metadata: verificationNotes,
+          });
+        }
+
+        await sendGigMail(ctx, {
+          userId: gig.postedBy,
+          gigId: args.gigId,
+          type: "payment_verified",
+          subject: "✅ Payment Verified (Manual Review)",
+          message: `Payment of KES ${clientConfirm.amount} for ${gig.title} has been verified. Note: Manual entry was used and will be reviewed by our team.`,
+          amount: clientConfirm.amount,
+          transactionId: clientTx,
+          extractedData: clientConfirm.extractedData,
+          actionUrl: `/hub/gigs/${args.gigId}`,
+          actionLabel: "View Gig",
+          metadata: verificationNotes,
+        });
+      }
+
+      // ========== HANDLE FULLY VERIFIED ==========
+      else {
         // Update musician stats
         if (gig.bookedBy) {
           const musician = await ctx.db.get(gig.bookedBy);
@@ -287,6 +551,21 @@ export const confirmPayment = mutation({
               responseTime: musician?.performanceStats?.responseTime,
               lastUpdated: Date.now(),
             },
+            // Increase trust score for successful completion
+            trustScore: Math.min(100, (musician?.trustScore || 0) + 2),
+          });
+
+          // Track in booking history for musician
+          await ctx.db.patch(gig.bookedBy, {
+            bookedMusicians: [
+              ...(musician?.bookedMusicians || []),
+              {
+                musicianId: gig.bookedBy,
+                gigId: args.gigId,
+                date: Date.now(),
+                ratingGiven: undefined,
+              },
+            ],
           });
         }
 
@@ -303,6 +582,8 @@ export const confirmPayment = mutation({
               date: Date.now(),
             },
           ],
+          // Increase trust score for successful payment
+          trustScore: Math.min(100, (client?.trustScore || 0) + 2),
         });
 
         // Send verification mails
@@ -332,78 +613,6 @@ export const confirmPayment = mutation({
           extractedData: clientConfirm.extractedData,
           actionUrl: `/hub/gigs/${args.gigId}`,
           actionLabel: "View Gig",
-        });
-      }
-      // ========== HANDLE MISMATCH/DISPUTE ==========
-      else {
-        // Update musician dispute count
-        if (gig.bookedBy) {
-          const musician = await ctx.db.get(gig.bookedBy);
-          await ctx.db.patch(gig.bookedBy, {
-            disputesCount: (musician?.disputesCount || 0) + 1,
-          });
-        }
-
-        // Update client dispute count
-        const client = await ctx.db.get(gig.postedBy);
-        await ctx.db.patch(gig.postedBy, {
-          disputesCount: (client?.disputesCount || 0) + 1,
-        });
-
-        // Send dispute mails to musician
-        if (gig.bookedBy) {
-          await sendGigMail(ctx, {
-            userId: gig.bookedBy,
-            gigId: args.gigId,
-            type: "payment_dispute",
-            subject: "⚠️ Payment Dispute",
-            message: `There's a payment discrepancy for ${gig.title}. ${reason}Our team will review.`,
-            amount: musicianConfirm.amount,
-            transactionId: musicianConfirm.extractedData?.transactionId,
-            extractedData: musicianConfirm.extractedData,
-            requiresAction: true,
-            actionUrl: `/hub/gigs/${args.gigId}/dispute`,
-            actionLabel: "View Dispute",
-            metadata: {
-              musicianAmount: musicianConfirm.amount,
-              clientAmount: clientConfirm.amount,
-              musicianTx: musicianTx,
-              clientTx: clientTx,
-              musicianConfidence: musicianConfidence,
-              clientConfidence: clientConfidence,
-              reason: reason.trim(),
-              amountMatch,
-              txMatch,
-              confidenceOk,
-            },
-          });
-        }
-
-        // Send dispute mails to client
-        await sendGigMail(ctx, {
-          userId: gig.postedBy,
-          gigId: args.gigId,
-          type: "payment_dispute",
-          subject: "⚠️ Payment Dispute",
-          message: `There's a payment discrepancy for ${gig.title}. ${reason}Our team will review.`,
-          amount: clientConfirm.amount,
-          transactionId: clientConfirm.extractedData?.transactionId,
-          extractedData: clientConfirm.extractedData,
-          requiresAction: true,
-          actionUrl: `/hub/gigs/${args.gigId}/dispute`,
-          actionLabel: "View Dispute",
-          metadata: {
-            musicianAmount: musicianConfirm.amount,
-            clientAmount: clientConfirm.amount,
-            musicianTx: musicianTx,
-            clientTx: clientTx,
-            musicianConfidence: musicianConfidence,
-            clientConfidence: clientConfidence,
-            reason: reason.trim(),
-            amountMatch,
-            txMatch,
-            confidenceOk,
-          },
         });
       }
     }
