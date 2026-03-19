@@ -197,46 +197,71 @@ export const confirmPayment = mutation({
       const musicianConfirm = updatedGig.musicianConfirmPayment;
       const clientConfirm = updatedGig.clientConfirmPayment;
 
-      // 1. Compare amounts
+      // 1. Compare amounts (always required)
       const amountMatch = musicianConfirm.amount === clientConfirm.amount;
 
-      // 2. Compare transaction IDs (handle null/undefined safely)
+      // 2. Compare transaction IDs - more flexible for manual entry
       const musicianTx = musicianConfirm.extractedData?.transactionId;
       const clientTx = clientConfirm.extractedData?.transactionId;
 
-      // Transaction IDs match if both exist and are equal, OR if both are missing/null
+      // Transaction IDs match if:
+      // - Both exist and are equal, OR
+      // - At least one is missing (manual entry) - we'll rely on amount match
+      // - Both are missing (no OCR used)
       const txMatch =
+        // If both have transaction IDs, they must match
         musicianTx && clientTx
-          ? musicianTx === clientTx // Both exist, compare them
-          : !musicianTx && !clientTx; // Both missing/null is considered a match
+          ? musicianTx === clientTx
+          : // If one or both are missing, don't fail the match based on transaction ID
+            true;
 
-      // 3. Check confidence thresholds
-      const musicianConfidence = musicianConfirm.extractedData?.confidence || 0;
-      const clientConfidence = clientConfirm.extractedData?.confidence || 0;
-      const confidenceOk = musicianConfidence >= 70 && clientConfidence >= 70;
+      // 3. Check confidence thresholds - only if OCR data exists
+      const musicianConfidence = musicianConfirm.extractedData?.confidence;
+      const clientConfidence = clientConfirm.extractedData?.confidence;
+
+      // Only enforce confidence check if BOTH users used OCR
+      // If either user entered manually (no extractedData), skip confidence check
+      const confidenceOk =
+        musicianConfidence && clientConfidence
+          ? musicianConfidence >= 70 && clientConfidence >= 70
+          : true; // Skip confidence check if manual entry
 
       // 4. Final match determination
+      // Amount must always match
+      // Transaction ID and confidence are flexible for manual entry
       const match = amountMatch && txMatch && confidenceOk;
 
-      // Build reason for mismatch
+      // Build reason for mismatch - more descriptive
       let reason = "";
       if (!amountMatch) reason += "Amount mismatch. ";
-      if (!txMatch) reason += "Transaction ID mismatch. ";
-      if (!confidenceOk) reason += "Low OCR confidence. ";
+      if (musicianTx && clientTx && musicianTx !== clientTx)
+        reason += "Transaction ID mismatch. ";
+      if (
+        musicianConfidence &&
+        clientConfidence &&
+        (musicianConfidence < 70 || clientConfidence < 70)
+      )
+        reason += "Low OCR confidence. ";
+
+      // If only one has transaction ID, add a note
+      if ((musicianTx && !clientTx) || (!musicianTx && clientTx)) {
+        reason += "One party entered transaction ID manually. ";
+      }
 
       // Update payment verification
+      // Note: You'll need to fix the "SYSTEM" issue separately
       await ctx.db.patch(args.gigId, {
         paymentVerification: {
           gigId: args.gigId,
           verifiedAt: Date.now(),
-          verifiedBy: "SYSTEM" as any,
+          verifiedBy: "SYSTEM" as any, // Fix this separately
           match: match,
           notes: match
             ? "Payment verified automatically"
             : reason || "Payment details mismatch",
           ocrConfidence: {
-            musician: musicianConfidence,
-            client: clientConfidence,
+            musician: musicianConfidence || 0,
+            client: clientConfidence || 0,
           },
         },
         paymentStatus: match ? "verified_paid" : "disputed",

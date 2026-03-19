@@ -1179,7 +1179,7 @@ export function PaymentHub({
                             isDarkMode ? "text-slate-400" : "text-slate-500"
                           }
                         >
-                          {otherParty?.avgRating?.toFixed(1) || "New"}
+                          {otherParty?.trustStars?.toFixed(1) || "New"}
                         </span>
                       </div>
                     </div>
