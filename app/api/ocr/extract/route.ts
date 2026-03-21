@@ -5,13 +5,8 @@ import path from "path";
 import fs from "fs";
 
 // Define paths at the top level
-const PROJECT_ROOT = process.cwd(); // This will be /home/zackblackhat/Desktop/gig_up
+const PROJECT_ROOT = process.cwd();
 const LANG_DIR = path.join(PROJECT_ROOT, "public", "tessdata");
-const TESSERACT_MODULE_PATH = path.join(
-  PROJECT_ROOT,
-  "node_modules",
-  "tesseract.js",
-);
 
 // Enhanced M-Pesa patterns
 const MPESA_PATTERNS = {
@@ -43,7 +38,6 @@ const SUPPORTED_TYPES = [
 // Check if language files exist
 function checkLanguageFiles() {
   console.log("Checking language files in:", LANG_DIR);
-  console.log("Project root:", PROJECT_ROOT);
 
   if (!fs.existsSync(LANG_DIR)) {
     console.log("Language directory does not exist");
@@ -184,9 +178,6 @@ export async function POST(req: NextRequest) {
   try {
     // Check language files at startup
     console.log("=== OCR API Started ===");
-    console.log("Current working directory:", PROJECT_ROOT);
-    console.log("Tesseract module path:", TESSERACT_MODULE_PATH);
-
     const hasLocalFiles = checkLanguageFiles();
 
     // Parse FormData
@@ -208,22 +199,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Log all fields in FormData for debugging
-    const formDataEntries: any = {};
-    for (const [key, value] of formData.entries()) {
-      if (value instanceof File) {
-        formDataEntries[key] = {
-          type: "File",
-          name: value.name,
-          size: value.size,
-          mimeType: value.type,
-        };
-      } else {
-        formDataEntries[key] = value;
-      }
-    }
-    console.log("FormData received:", JSON.stringify(formDataEntries, null, 2));
-
     // Get the image file from FormData
     const imageFile = formData.get("image") as File | null;
 
@@ -240,23 +215,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!(imageFile instanceof File)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "The 'image' field is not a valid file",
-          receivedType: typeof imageFile,
-          code: "INVALID_FILE_TYPE",
-        },
-        { status: 400 },
-      );
-    }
-
     console.log("Processing OCR for image:", {
       name: imageFile.name,
       type: imageFile.type,
       size: imageFile.size,
-      lastModified: new Date(imageFile.lastModified).toISOString(),
     });
 
     // Validate and process the image file
@@ -271,7 +233,6 @@ export async function POST(req: NextRequest) {
           success: false,
           error:
             error instanceof Error ? error.message : "Image validation failed",
-          details: error instanceof Error ? error.stack : String(error),
           code: "INVALID_IMAGE",
         },
         { status: 400 },
@@ -280,63 +241,72 @@ export async function POST(req: NextRequest) {
 
     console.log("Image validated, size:", imageBuffer.length, "bytes");
 
-    // Initialize worker with explicit paths
-    console.log("Initializing Tesseract worker with explicit paths...");
+    // Initialize worker with simpler configuration
+    console.log("Initializing Tesseract worker...");
     let worker;
+
     try {
-      // Use CDN paths instead of local files to avoid path issues
-      console.log("Using CDN paths for reliability...");
+      // Use the simplest possible initialization first
+      worker = await createWorker();
+      console.log("Worker created with defaults");
 
-      worker = await createWorker({
-        langPath: hasLocalFiles
-          ? LANG_DIR
-          : "https://tessdata.projectnaptha.com/4.0.0",
-        corePath:
-          "https://cdn.jsdelivr.net/npm/tesseract.js-core@4.0.2/tesseract-core.wasm.js",
-        workerPath:
-          "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js",
-        logger: (m) => {
-          if (process.env.NODE_ENV === "development") {
-            console.log("Tesseract CDN:", m);
-          }
-        },
-      });
-
-      console.log("Worker created successfully with CDN");
-
+      // Load language
       console.log("Loading English language...");
       await worker.loadLanguage("eng");
-      console.log("Language loaded successfully");
-
-      console.log("Initializing English...");
       await worker.initialize("eng");
-      console.log("Initialization successful");
-
-      console.log("Setting parameters...");
-      await worker.setParameters({
-        tessedit_char_whitelist:
-          "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz/:.,- ",
-        tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
-        preserve_interword_spaces: "1",
-      });
-      console.log("Parameters set successfully");
-    } catch (workerError) {
-      console.error("Failed to initialize Tesseract worker:", workerError);
-
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Failed to initialize OCR engine",
-          details:
-            workerError instanceof Error
-              ? workerError.message
-              : String(workerError),
-          code: "WORKER_INIT_FAILED",
-          message: "Could not start OCR engine. Please try again later.",
-        },
-        { status: 500 },
+      console.log("Language loaded successfully");
+    } catch (simpleError) {
+      console.log(
+        "Simple initialization failed, trying with explicit paths...",
+        simpleError,
       );
+
+      // If simple fails, try with explicit paths
+      try {
+        if (worker) await worker.terminate().catch(() => {});
+
+        // Try with CDN paths - using the correct format
+        worker = await createWorker({
+          langPath: hasLocalFiles
+            ? LANG_DIR
+            : "https://tessdata.projectnaptha.com/4.0.0",
+          logger: (m) => {
+            if (process.env.NODE_ENV === "development") {
+              console.log("Tesseract:", m);
+            }
+          },
+        });
+
+        console.log("Worker created with custom langPath");
+
+        await worker.loadLanguage("eng");
+        await worker.initialize("eng");
+        console.log("Language loaded successfully");
+      } catch (cdnError) {
+        console.error("All worker initialization attempts failed:", cdnError);
+
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Failed to initialize OCR engine",
+            details:
+              cdnError instanceof Error ? cdnError.message : String(cdnError),
+            code: "WORKER_INIT_FAILED",
+            message: "Could not start OCR engine. Please try again later.",
+          },
+          { status: 500 },
+        );
+      }
     }
+
+    // Set parameters for better accuracy
+    console.log("Setting parameters...");
+    await worker.setParameters({
+      tessedit_char_whitelist:
+        "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz/:.,- ",
+      tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
+      preserve_interword_spaces: "1",
+    });
 
     // Recognize text
     console.log("Running OCR recognition...");
@@ -364,7 +334,6 @@ export async function POST(req: NextRequest) {
     }
 
     console.log("OCR confidence:", data.confidence);
-    console.log("Extracted text length:", data.text.length);
     console.log("Extracted text preview:", data.text.substring(0, 200));
 
     if (!data.text || data.text.trim().length === 0) {
@@ -424,13 +393,11 @@ export async function POST(req: NextRequest) {
 
     const errorMessage =
       error instanceof Error ? error.message : "OCR processing failed";
-    const errorStack = error instanceof Error ? error.stack : undefined;
 
     return NextResponse.json(
       {
         success: false,
         error: errorMessage,
-        details: errorStack,
         code: "UNEXPECTED_ERROR",
         message:
           "An unexpected error occurred during OCR processing. Please try again.",
